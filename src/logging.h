@@ -4,7 +4,8 @@ const char* TAGS[] = {
   "rotary",
   "lights",
   "ili9341",
-  "main"
+  "main",
+  "boot"
 };
 
 void debug(char* tag, char* txt) {
