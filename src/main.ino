@@ -1,23 +1,13 @@
-#include "logging.h"
-#include "pins.h"
-#include "lights.h"
-#include "button.h"
-#include "display.h"
-#include "pipboot.h"
-#include "pip.h"
+#include "CPipBoy.h"
 
+PipBoy pip;
 void setup() {
   Serial.begin(9600);
-  debug("main", "booting...");
-  initializeLights();
-  initializeRotaryButton();
-  initializeDisplay();
-  bootPipBoy();
-  debug("main", "finished, running loop...");
+  delay(1000);
+  pip.init();
+  pip.boot();
 }
 
 void loop() {
-  updateCategoryLights();
-  updateRotaryButton();
-  updatePipBoy();
+  pip.tick();
 }

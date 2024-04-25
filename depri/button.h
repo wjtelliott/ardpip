@@ -50,7 +50,7 @@ int* getLastVoltagePointer(char* type) {
   if (type == "leftright") return &lastPageLeftRightVoltage;
   if (type == "updown") return &lastPageUpDownVoltage;
   if (type == "page") return &lastPageSelectVoltage;
-  return 255; // C doesn't throw errors, so we are just going to assume this won't break and hope for the best
+  return 255; // C doesn't throw, we just assume this won't break and hope for the best
 }
 int8_t getStateOfPageController(char* pageControllerType) {
   uint8_t CLK = getControllerTypeInfo(pageControllerType, "CLK");
