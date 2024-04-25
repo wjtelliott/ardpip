@@ -3,7 +3,7 @@
 PipBoy pip;
 void setup() {
   Serial.begin(9600);
-  delay(1000);
+  delay(50);
   pip.init();
   pip.boot();
 }

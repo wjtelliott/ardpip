@@ -57,32 +57,40 @@ class PipBoy {
     };
 
     const PipBoyDisplay _display;
-    void assertPageInScope();
     void buildGarbageBootData(char*);
     void printGarbageBootData(char*, uint8_t);
     void printBootIntro();
     void haltAndBlinkCursor(uint8_t);
 
-    // init funcs
+    // exception checks
+    void assertPageInScope();
 
-    // tick funcs
+    // init/loop funcs
     void updateLights();
+    void updatePageSelectRotary();
+    void updateHorizontalRotary();
+    void updateVerticalRotary();
+
   public:
     PipBoy();
+    // init/loop funcs
     void init();
     void boot();
     void tick();
+
+    // ui management
     void moveHighlightedItem(int8_t);
     void changePage(int8_t);
     void changeCategory(int8_t);
 
+    // getters
     char* getPageName();
     char* getCategoryName();
     char* getHighlightedItem();
-
     char* getAllPageNames();
     char* getAllCategoryNamesForPage(uint8_t);
     char* getAllItemNamesForPage(uint8_t);
+    char* getPageContents();
 };
 
 #endif

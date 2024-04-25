@@ -14,6 +14,7 @@ class PipBoyPage {
     uint8_t _currentPageCategory;
     uint8_t _currentHighlightedItem;
     char *_categories[5];
+    Item _items[7];
     void assertCategoryInBounds();
     void assertItemInBounds();
   public:
@@ -24,10 +25,14 @@ class PipBoyPage {
 
     char* getPageName();
     char* getCategoryName();
+    char* getCategoryNameAtIndex(uint8_t);
+    uint8_t getCategoryAmount();
     char* getHighlightedItem();
 
     char* getAllCategoryNamesForPage();
     char* getAllItemNamesForPage();
+    char* getContents();
+    void pushItem(Item);
 };
 
 #endif

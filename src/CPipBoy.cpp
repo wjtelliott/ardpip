@@ -18,6 +18,9 @@ void PipBoy::init() {
   _pageVerticalRotary = { PAGE_UP_DOWN_CLK, PAGE_UP_DOWN_DT, PAGE_UP_DOWN_SW };
 
   _display.init();
+
+  Item newItem = { "first item", STAT_CATEGORY2 };
+  _pages[0]->pushItem(newItem);
 }
 
 void PipBoy::boot() {
@@ -105,8 +108,24 @@ void PipBoy::assertPageInScope() {
 }
 
 void PipBoy::moveHighlightedItem(int8_t direction) {}
-void PipBoy::changePage(int8_t direction) {}
-void PipBoy::changeCategory(int8_t direction) {}
+
+void PipBoy::changePage(int8_t direction) {
+  int8_t sanitizedDirection = 0;
+  if (direction < 0) sanitizedDirection = -1;
+  else if (direction > 0) sanitizedDirection = 1;
+  _currentPage += sanitizedDirection;
+  if (_currentPage >= sizeof(_pages)/sizeof(_pages[0])) _currentPage = 0;
+
+  if (sanitizedDirection) _needsPageRedraw = true;
+}
+
+void PipBoy::changeCategory(int8_t direction) {
+  int8_t sanitizedDirection = 0;
+  if (direction < 0) sanitizedDirection = -1;
+  else if (direction > 0) sanitizedDirection = 1;
+  _pages[_currentPage]->changePageCategory(sanitizedDirection);
+  if (sanitizedDirection) _needsPageRedraw = true;
+}
 
 char* PipBoy::getPageName() {
   assertPageInScope();
@@ -121,6 +140,11 @@ char* PipBoy::getHighlightedItem() {
   return "highlight";
 }
 
+char* PipBoy::getPageContents() {
+  assertPageInScope();
+  return _pages[_currentPage]->getContents();
+}
+
 char* PipBoy::getAllPageNames() {
   return "";
 }
@@ -131,13 +155,29 @@ char* PipBoy::getAllItemNamesForPage(uint8_t pageId) {
   return "";
 }
 
-void PipBoy::tick() {
-  if (!_needsPageRedraw) return;
-  _needsPageRedraw = true;
+void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
+  if (!*needsRedraw) return;
+  display->clear();
+  *needsRedraw = false;
   // draw page name
-  _display.moveCursor(0,0);
-  _display.typeString(this->getPageName(), false);
+  display->moveCursor(0,0);
+  display->typeString(pip->getPageName(), false);
   // draw page category
-  _display.typeString(" - ", false);
-  _display.typeString(this->getCategoryName(), false);
+  display->typeString(" - ", false);
+  display->typeStringLn(pip->getCategoryName(), false);
+  display->typeStringLn(pip->getPageContents(), false);
+}
+
+void test(PipBoy* pip) {
+  auto catName = pip->getCategoryName();
+  pip->changeCategory(1);
+  if (catName == STAT_CATEGORY5 || catName == INVENTORY_CATEGORY5 || catName == DATA_CATEGORY5) {
+    pip->changePage(1);
+  }
+  delay(500);
+}
+
+void PipBoy::tick() {
+  redrawPage(&_needsPageRedraw, &_display, this);
+  test(this);
 }
