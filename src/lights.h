@@ -11,7 +11,7 @@ char* getTabPageFromIndex(uint8_t idx) {
   }
 }
 
-// category is basically controlled by the lights, this sucks bro
+// currentCategory will be based on the LIGHTS index
 uint8_t currentCategory = 0;
 
 void displayPageName() {

@@ -71,7 +71,6 @@ void printGarbageData(char* txt, uint8_t amount) {
 
 void printBootIntro() {
   for (uint8_t idx = 0; idx < INTRO_SIZE; idx++) {
-    Serial.println(bootIntro[idx]);
     typeStringLnOnDisplay(bootIntro[idx], false);
   }
 }

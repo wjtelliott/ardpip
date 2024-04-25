@@ -4,6 +4,7 @@
 #include "button.h"
 #include "display.h"
 #include "pipboot.h"
+#include "pip.h"
 
 void setup() {
   Serial.begin(9600);
@@ -18,4 +19,5 @@ void setup() {
 void loop() {
   updateCategoryLights();
   updateRotaryButton();
+  updatePipBoy();
 }

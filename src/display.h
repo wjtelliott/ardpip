@@ -65,6 +65,10 @@ uint8_t getCursorY() {
   return tft.getCursorY();
 }
 
+void drawRectOnDisplay(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color) {
+  tft.drawRect(x, y, width, height, COLORS[color]);
+}
+
 void fillRectOnDisplay(uint8_t x, uint8_t y, uint8_t width, uint8_t height, uint16_t color) {
   tft.fillRect(x, y, width, height, COLORS[color]);
 }
