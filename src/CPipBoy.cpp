@@ -1,6 +1,11 @@
 #include <Arduino.h>
 #include "CPipBoy.h"
 #include "pins.h"
+#include "CWeapons.h"
+#include "CStats.h"
+#include "CConditions.h"
+#include "CSpecials.h"
+
 #define NO_PAGE_ERROR "No Page!"
 
 PipBoy::PipBoy() {}
@@ -14,13 +19,45 @@ void PipBoy::init() {
   }
 
   _changePageRotary = { ENCODER_CLK, ENCODER_DT, ENCODER_SW };
+  pinMode(ENCODER_CLK, INPUT);
+  pinMode(ENCODER_DT, INPUT);
   _pageHorizontalRotary = { PAGE_LEFT_RIGHT_CLK, PAGE_LEFT_RIGHT_DT, PAGE_LEFT_RIGHT_SW };
+  pinMode(PAGE_LEFT_RIGHT_CLK, INPUT);
+  pinMode(PAGE_LEFT_RIGHT_DT, INPUT);
   _pageVerticalRotary = { PAGE_UP_DOWN_CLK, PAGE_UP_DOWN_DT, PAGE_UP_DOWN_SW };
+
+  pinMode(STAT_LIGHT, OUTPUT);
+  pinMode(INV_LIGHT, OUTPUT);
+  pinMode(DATA_LIGHT, OUTPUT);
 
   _display.init();
 
-  Item newItem = { "first item", STAT_CATEGORY2 };
-  _pages[0]->pushItem(newItem);
+  Item allPistols[] = PISTOLS;
+  for (uint8_t i = 0; i < sizeof(allPistols)/sizeof(allPistols[0]); i++) {
+    _pages[1]->pushItem(allPistols[i]);
+  }
+
+  Item allStats[] = STATS;
+  for (uint8_t i = 0; i < sizeof(allStats)/sizeof(allStats[0]); i++) {
+    _pages[0]->pushItem(allStats[i]);
+  }
+
+  Item allConditions[] = CONDITIONS;
+  for (uint8_t i = 0; i < sizeof(allConditions)/sizeof(allConditions[0]); i++) {
+    _pages[0]->pushItem(allConditions[i]);
+  }
+
+  Item allSpecials[] = SPECIALS;
+  for (uint8_t i = 0; i < sizeof(allSpecials)/sizeof(allSpecials[0]); i++) {
+    _pages[0]->pushItem(allSpecials[i]);
+  }
+}
+
+void PipBoy::updatePipLights() {
+  char* pageName = _pages[_currentPage]->getPageName();
+  digitalWrite(STAT_LIGHT, pageName == STAT_PAGE ? HIGH : LOW);
+  digitalWrite(INV_LIGHT, pageName == INVENTORY_PAGE ? HIGH : LOW);
+  digitalWrite(DATA_LIGHT, pageName == DATA_PAGE ? HIGH : LOW);
 }
 
 void PipBoy::boot() {
@@ -113,9 +150,12 @@ void PipBoy::changePage(int8_t direction) {
   int8_t sanitizedDirection = 0;
   if (direction < 0) sanitizedDirection = -1;
   else if (direction > 0) sanitizedDirection = 1;
-  _currentPage += sanitizedDirection;
-  if (_currentPage >= sizeof(_pages)/sizeof(_pages[0])) _currentPage = 0;
-
+  if (_currentPage == 0 && sanitizedDirection == -1) {
+    _currentPage = sizeof(_pages)/sizeof(_pages[0]) - 1;
+  } else {
+    _currentPage += sanitizedDirection;
+    if (_currentPage >= sizeof(_pages)/sizeof(_pages[0])) _currentPage = 0;
+  }
   if (sanitizedDirection) _needsPageRedraw = true;
 }
 
@@ -159,13 +199,11 @@ void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
   if (!*needsRedraw) return;
   display->clear();
   *needsRedraw = false;
-  // draw page name
   display->moveCursor(0,0);
-  display->typeString(pip->getPageName(), false);
-  // draw page category
-  display->typeString(" - ", false);
-  display->typeStringLn(pip->getCategoryName(), false);
-  display->typeStringLn(pip->getPageContents(), false);
+  display->typeString(pip->getPageName(), true);
+  display->typeString(" - ", true);
+  display->typeStringLn(pip->getCategoryName(), true);
+  display->typeStringLn(pip->getPageContents(), true);
 }
 
 void test(PipBoy* pip) {
@@ -174,10 +212,69 @@ void test(PipBoy* pip) {
   if (catName == STAT_CATEGORY5 || catName == INVENTORY_CATEGORY5 || catName == DATA_CATEGORY5) {
     pip->changePage(1);
   }
-  delay(500);
+  delay(750);
 }
 
 void PipBoy::tick() {
+  updatePipLights();
+  int8_t newPageDirection = getPageDirection();
+  if (newPageDirection) changePage(newPageDirection);
+  else {
+    int8_t newCategoryDirection = getCategoryDirection();
+    if (newCategoryDirection) changeCategory(newCategoryDirection);
+  }
   redrawPage(&_needsPageRedraw, &_display, this);
-  test(this);
+  // test(this);
+}
+
+int* PipBoy::getLastPageSelectVoltage() {
+  return &_lastPageSelectVoltage;
+}
+
+int* PipBoy::getLastCategoryVoltage() {
+  return &_lastCategorySelectVoltage;
+}
+
+uint8_t getControllerTypeInfo(char* type, char* pinType) {
+  if (type == "leftright") {
+    return pinType == "CLK" ? PAGE_LEFT_RIGHT_CLK : PAGE_LEFT_RIGHT_DT;
+  }
+  if (type == "updown") {
+    return pinType == "CLK" ? PAGE_UP_DOWN_CLK : PAGE_UP_DOWN_DT;
+  }
+  if (type == "page") {
+    return pinType == "CLK" ? ENCODER_CLK : ENCODER_DT;
+  }
+  return 255;
+}
+
+int* getLastVoltagePointer(char* type, PipBoy* pip) {
+  if (type == "leftright") return pip->getLastCategoryVoltage();
+  // if (type == "updown") return &lastPageUpDownVoltage;
+  if (type == "page") return pip->getLastPageSelectVoltage();
+  return 255; // C doesn't throw, we just assume this won't break and hope for the best
+}
+
+int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
+  uint8_t CLK = getControllerTypeInfo(rotaryType, "CLK");
+  uint8_t DT = getControllerTypeInfo(rotaryType, "DT");
+  int *lastRotateVoltage = getLastVoltagePointer(rotaryType, pip);
+
+  auto newRotateVoltage = digitalRead(CLK);
+  if (*lastRotateVoltage == newRotateVoltage) return 0;
+  *lastRotateVoltage = newRotateVoltage;
+  if (newRotateVoltage == HIGH) return 0;
+
+  auto direction = digitalRead(DT);
+  delay(100);
+  return direction == HIGH ? _CLOCKWISE : _COUNTER_CLOCKWISE;
+}
+
+// will return either a -1,0,1. this will apply to the change page function
+int8_t PipBoy::getPageDirection() {
+  return getRotateStateOfRotaryButton("page", this);
+}
+
+int8_t PipBoy::getCategoryDirection() {
+  return getRotateStateOfRotaryButton("leftright", this);
 }

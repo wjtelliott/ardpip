@@ -1,0 +1,11 @@
+#include "CPipBoyPageNames.h"
+
+#define SPECIAL STAT_CATEGORY3
+#define STRENGTH     { "STRENGTH     : 5", SPECIAL }
+#define PERCEPTION   { "PERCEPTION   : 7", SPECIAL }
+#define ENDURANCE    { "ENDURANCE    : 4", SPECIAL }
+#define CHARISMA     { "CHARISMA     : 2", SPECIAL }
+#define INTELLIGENCE { "INTELLIGENCE : 8", SPECIAL }
+#define AGILITY      { "AGILITY      : 2", SPECIAL }
+#define LUCK         { "LUCK         : 1", SPECIAL }
+#define SPECIALS { STRENGTH, PERCEPTION, ENDURANCE, CHARISMA, INTELLIGENCE, AGILITY, LUCK }

@@ -5,7 +5,7 @@
 #include "pins.h"
 
 #define HORIZONTAL 1
-#define DEFAULT_TEXT_SIZE 1
+#define DEFAULT_TEXT_SIZE 1.5
 #define RED 0
 #define BLUE 1
 #define GREEN 2

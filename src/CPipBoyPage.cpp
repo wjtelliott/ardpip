@@ -37,6 +37,10 @@ void PipBoyPage::assertItemInBounds (){}
 
 void PipBoyPage::moveHighlightedItem(int8_t direction) {}
 void PipBoyPage::changePageCategory(int8_t direction) {
+  if (_currentPageCategory == 0 && direction < 0) {
+    _currentPageCategory = sizeof(_categories)/sizeof(_categories[0]) - 1;
+    return;
+  }
   _currentPageCategory += direction;
   if (_currentPageCategory >= sizeof(_categories)/sizeof(_categories[0])) {
     _currentPageCategory = 0;
@@ -56,10 +60,20 @@ char* PipBoyPage::getCategoryNameAtIndex(uint8_t idx) {
 char* PipBoyPage::getHighlightedItem() {}
 
 char* PipBoyPage::getContents() {
+  char buffer[50];
+  strcpy(buffer, "\n");
   for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
-    Serial.println(i);
+    if (
+      _items[i].categoryName != _categories[_currentPageCategory] ||
+      _items[i].name == NULL
+    ) {
+      continue;
+    }
+    strcat(buffer, _items[i].name);
+    strcat(buffer, "\n");
   }
-  return "none";
+  char* outputer = buffer;
+  return outputer;
 }
 
 uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
@@ -71,18 +85,23 @@ uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
   for(;;);
 }
 
-void PipBoyPage::pushItem(Item item) {
-  auto categoryIndex = getIndexOfCategory(this, item.categoryName);
-  Item tmp[sizeof(_items)];
+void PipBoyPage::removeItem(Item item) {
   for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
-    tmp[i] = _items[i];
+    if (_items[i].name == item.name && _items[i].categoryName == item.categoryName) {
+      _items[i].name = NULL;
+      _items[i].categoryName = NULL;
+      return;
+    }
   }
-  free(_items);
-  _items = (Item[]) malloc(sizeof(tmp)/sizeof(tmp[0]) + sizeof(tmp[0]));
-  for (uint8_t i = 0; i < sizeof(tmp)/sizeof(tmp[0]); i++) {
-    _items[i] = tmp[i];
+}
+
+void PipBoyPage::pushItem(Item item) {
+  for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
+    if (_items[i].name == NULL) {
+      _items[i] = item;
+      return;
+    }
   }
-  _items[sizeof(_items)/sizeof(_items[0])] = item;
 }
 
 uint8_t PipBoyPage::getCategoryAmount() {

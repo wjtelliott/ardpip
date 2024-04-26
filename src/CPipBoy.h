@@ -6,6 +6,10 @@
 #include "CPipBoyPage.h"
 #include "CPipBoyDisplay.h"
 
+// rotary
+#define _CLOCKWISE 1
+#define _COUNTER_CLOCKWISE -1
+
 //---- Pipboy boot sequence//
 #define _s1 " 0x00000000000000000"
 #define _s2 " 0x000000000000E003D"
@@ -56,6 +60,9 @@ class PipBoy {
       new PipBoyPage(DATA_PAGE)
     };
 
+    int _lastPageSelectVoltage = HIGH;
+    int _lastCategorySelectVoltage = HIGH;
+
     const PipBoyDisplay _display;
     void buildGarbageBootData(char*);
     void printGarbageBootData(char*, uint8_t);
@@ -79,9 +86,12 @@ class PipBoy {
     void tick();
 
     // ui management
+    void updatePipLights();
     void moveHighlightedItem(int8_t);
     void changePage(int8_t);
     void changeCategory(int8_t);
+    int8_t getPageDirection();
+    int8_t getCategoryDirection();
 
     // getters
     char* getPageName();
@@ -91,6 +101,8 @@ class PipBoy {
     char* getAllCategoryNamesForPage(uint8_t);
     char* getAllItemNamesForPage(uint8_t);
     char* getPageContents();
+    int* getLastPageSelectVoltage();
+    int* getLastCategoryVoltage();
 };
 
 #endif
