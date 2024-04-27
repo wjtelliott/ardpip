@@ -6,6 +6,19 @@ PipBoyPage::PipBoyPage(char* pageName) {
   _currentPageCategory = 0;
   _currentHighlightedItem = 0;
   _name = pageName;
+  Item blankItem = {"", ""};
+  _items[5];
+  _items[0] = blankItem;
+  _items[1] = blankItem;
+  _items[2] = blankItem;
+  _items[3] = blankItem;
+  _items[4] = blankItem;
+  _items[5] = blankItem;
+  _items[6] = blankItem;
+  _items[7] = blankItem;
+  _items[8] = blankItem;
+  _items[9] = blankItem;
+  _items[10] = blankItem;
 };
 
 void PipBoyPage::setupPage() {
@@ -88,8 +101,8 @@ uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
 void PipBoyPage::removeItem(Item item) {
   for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
     if (_items[i].name == item.name && _items[i].categoryName == item.categoryName) {
-      _items[i].name = NULL;
-      _items[i].categoryName = NULL;
+      _items[i].name = "";
+      _items[i].categoryName = "";
       return;
     }
   }
@@ -97,7 +110,8 @@ void PipBoyPage::removeItem(Item item) {
 
 void PipBoyPage::pushItem(Item item) {
   for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
-    if (_items[i].name == NULL) {
+    if (_items[i].name == NULL || _items[i].name == "") {
+      Serial.print("Pushing item: "); Serial.print(item.name); Serial.println(item.categoryName);
       _items[i] = item;
       return;
     }

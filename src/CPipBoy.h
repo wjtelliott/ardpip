@@ -26,7 +26,7 @@
 #define _str5 " CPU0 loading user settings"
 #define _str6 " CPU0 launch user"
 
-#define _boot1 "*************** PIP-OS(R) V1.0 ***************"
+#define _boot1 "************ PIP-OS(R) V1.0 ***********"
 #define _boot2 ""
 #define _boot3 ""
 #define _boot4 ""

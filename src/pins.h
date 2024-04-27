@@ -14,5 +14,5 @@
 #define INV_LIGHT 4
 #define DATA_LIGHT 2
 // ILI9341
-#define TFT_DC 13
-#define TFT_CS 53
+// #define TFT_DC 13
+// #define TFT_CS 53

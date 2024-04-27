@@ -5,10 +5,36 @@
 #include "CStats.h"
 #include "CConditions.h"
 #include "CSpecials.h"
+#include "CApparel.h"
+#include "CAid.h"
+#include "CHealth.h"
+#include "CAmmo.h"
+#include "CSomethingElses.h"
+#include "CMiscs.h"
+#include "CQuests.h"
+#include "CNotes.h"
+#include "CRadios.h"
+
 
 #define NO_PAGE_ERROR "No Page!"
 
 PipBoy::PipBoy() {}
+
+//
+// Used in calculating free memory.
+//
+extern unsigned int __bss_end;
+extern void *__brkval;
+
+//
+// Returns the current amount of free memory in bytes.
+//
+int freeMemory() {
+	int free_memory;
+	if ((int) __brkval)
+		return ((int) &free_memory) - ((int) __brkval);
+	return ((int) &free_memory) - ((int) &__bss_end);
+}
 
 void PipBoy::init() {
   _currentPage = 0;
@@ -19,38 +45,81 @@ void PipBoy::init() {
   }
 
   _changePageRotary = { ENCODER_CLK, ENCODER_DT, ENCODER_SW };
-  pinMode(ENCODER_CLK, INPUT);
-  pinMode(ENCODER_DT, INPUT);
   _pageHorizontalRotary = { PAGE_LEFT_RIGHT_CLK, PAGE_LEFT_RIGHT_DT, PAGE_LEFT_RIGHT_SW };
-  pinMode(PAGE_LEFT_RIGHT_CLK, INPUT);
-  pinMode(PAGE_LEFT_RIGHT_DT, INPUT);
   _pageVerticalRotary = { PAGE_UP_DOWN_CLK, PAGE_UP_DOWN_DT, PAGE_UP_DOWN_SW };
-
-  pinMode(STAT_LIGHT, OUTPUT);
-  pinMode(INV_LIGHT, OUTPUT);
-  pinMode(DATA_LIGHT, OUTPUT);
 
   _display.init();
 
-  Item allPistols[] = PISTOLS;
-  for (uint8_t i = 0; i < sizeof(allPistols)/sizeof(allPistols[0]); i++) {
-    _pages[1]->pushItem(allPistols[i]);
-  }
-
+  // this looks gross for right now, but this is how it's gonna be until i make it more dry... :(
+  // stats
   Item allStats[] = STATS;
-  for (uint8_t i = 0; i < sizeof(allStats)/sizeof(allStats[0]); i++) {
+  for (uint8_t i = 0; i < sizeof(allStats)/sizeof(allStats[0]) && i < 20; i++) {
     _pages[0]->pushItem(allStats[i]);
   }
-
   Item allConditions[] = CONDITIONS;
-  for (uint8_t i = 0; i < sizeof(allConditions)/sizeof(allConditions[0]); i++) {
+  for (uint8_t i = 0; i < sizeof(allConditions)/sizeof(allConditions[0]) && i < 20; i++) {
     _pages[0]->pushItem(allConditions[i]);
   }
-
   Item allSpecials[] = SPECIALS;
-  for (uint8_t i = 0; i < sizeof(allSpecials)/sizeof(allSpecials[0]); i++) {
+  for (uint8_t i = 0; i < sizeof(allSpecials)/sizeof(allSpecials[0]) && i < 20; i++) {
     _pages[0]->pushItem(allSpecials[i]);
   }
+  Item allHealths[] = STATS_HEALTHS;
+  for (uint8_t i = 0; i < sizeof(allHealths)/sizeof(allHealths[0]) && i < 20; i++) {
+    _pages[0]->pushItem(allHealths[i]);
+  }
+  Item allSomethingElses[] = STATS_1;
+  for (uint8_t i = 0; i < sizeof(allSomethingElses)/sizeof(allSomethingElses[0]) && i < 20; i++) {
+    _pages[0]->pushItem(allSomethingElses[i]);
+  }
+
+  Serial.print("Free mem left: "); Serial.println(freeMemory());
+
+  // inventory
+  Item allPistols[] = PISTOLS;
+  for (uint8_t i = 0; i < sizeof(allPistols)/sizeof(allPistols[0]) && i < 20; i++) {
+    _pages[1]->pushItem(allPistols[i]);
+  }
+  Item allApparel[] = ARMORS;
+  for (uint8_t i = 0; i < sizeof(allApparel)/sizeof(allApparel[0]) && i < 20; i++) {
+    _pages[1]->pushItem(allApparel[i]);
+  }
+  Item allAids[] = MEDS;
+  for (uint8_t i = 0; i < sizeof(allAids)/sizeof(allAids[0]) && i < 20; i++) {
+    _pages[1]->pushItem(allAids[i]);
+  }
+  Item allAmmos[] = AMMOS;
+  for (uint8_t i = 0; i < sizeof(allAmmos)/sizeof(allAmmos[0]) && i < 20; i++) {
+    _pages[1]->pushItem(allAmmos[i]);
+  }
+  Item allMisc[] = ALL_MISCS;
+  for (uint8_t i = 0; i < sizeof(allMisc)/sizeof(allMisc[0]) && i < 20; i++) {
+    _pages[1]->pushItem(allMisc[i]);
+  }
+  Serial.print("Free mem left: "); Serial.println(freeMemory());
+
+  // data page stuff
+  // Item allWorldMap[] = PISTOLS;
+  // for (uint8_t i = 0; i < sizeof(allWorldMap)/sizeof(allWorldMap[0]) && i < 20; i++) {
+  //   _pages[2]->pushItem(allWorldMap[i]);
+  // }
+  // Item allLocalMap[] = ARMORS;
+  // for (uint8_t i = 0; i < sizeof(allLocalMap)/sizeof(allLocalMap[0]) && i < 20; i++) {
+  //   _pages[2]->pushItem(allLocalMap[i]);
+  // }
+  Item allQuests[] = QUESTS;
+  for (uint8_t i = 0; i < sizeof(allQuests)/sizeof(allQuests[0]) && i < 20; i++) {
+    _pages[2]->pushItem(allQuests[i]);
+  }
+  Item allNotes[] = NOTES;
+  for (uint8_t i = 0; i < sizeof(allNotes)/sizeof(allNotes[0]) && i < 20; i++) {
+    _pages[2]->pushItem(allNotes[i]);
+  }
+  Item allRadios[] = RADIOS;
+  for (uint8_t i = 0; i < sizeof(allRadios)/sizeof(allRadios[0]) && i < 20; i++) {
+    _pages[2]->pushItem(allRadios[i]);
+  }
+  Serial.print("Free mem left: "); Serial.println(freeMemory());
 }
 
 void PipBoy::updatePipLights() {
@@ -63,7 +132,7 @@ void PipBoy::updatePipLights() {
 void PipBoy::boot() {
   char* garbage = malloc(0);
   buildGarbageBootData(garbage);
-  printGarbageBootData(garbage, 5);
+  printGarbageBootData(garbage, 3);
   free(garbage);
   _display.clear();
   _display.moveCursor(0, 0);
@@ -125,8 +194,8 @@ void PipBoy::haltAndBlinkCursor(uint8_t amount) {
   if (amount < 1) return;
   auto x = _display.getCursorX();
   auto y = _display.getCursorY();
-  auto width = 6;
-  auto height = 10;
+  auto width = 12;
+  auto height = 20;
   auto blinkDelay = 500;
   
   for (uint8_t i = 0; i < amount; i++) {
@@ -199,7 +268,7 @@ void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
   if (!*needsRedraw) return;
   display->clear();
   *needsRedraw = false;
-  display->moveCursor(0,0);
+  display->moveCursor(25,50);
   display->typeString(pip->getPageName(), true);
   display->typeString(" - ", true);
   display->typeStringLn(pip->getCategoryName(), true);
@@ -212,19 +281,19 @@ void test(PipBoy* pip) {
   if (catName == STAT_CATEGORY5 || catName == INVENTORY_CATEGORY5 || catName == DATA_CATEGORY5) {
     pip->changePage(1);
   }
-  delay(750);
+  delay(1750);
 }
 
 void PipBoy::tick() {
-  updatePipLights();
-  int8_t newPageDirection = getPageDirection();
-  if (newPageDirection) changePage(newPageDirection);
-  else {
-    int8_t newCategoryDirection = getCategoryDirection();
-    if (newCategoryDirection) changeCategory(newCategoryDirection);
-  }
+  // updatePipLights();
+  // int8_t newPageDirection = getPageDirection();
+  // if (newPageDirection) changePage(newPageDirection);
+  // else {
+  //   int8_t newCategoryDirection = getCategoryDirection();
+  //   if (newCategoryDirection) changeCategory(newCategoryDirection);
+  // }
   redrawPage(&_needsPageRedraw, &_display, this);
-  // test(this);
+  test(this);
 }
 
 int* PipBoy::getLastPageSelectVoltage() {

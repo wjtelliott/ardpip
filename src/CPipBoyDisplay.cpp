@@ -1,17 +1,20 @@
 #include "CPipBoyDisplay.h"
 
 PipBoyDisplay::PipBoyDisplay() {
+  _tft = TFT_HX8357();
   _textSize = DEFAULT_TEXT_SIZE;
-  _textColor = ILI9341_WHITE;
+  _textColor = TFT_WHITE;
 }
 
 void PipBoyDisplay::init() {
-  //debug("ili9341", "setting up display...");
   _tft.begin();
   _tft.setRotation(HORIZONTAL);
+  _tft.fillScreen(TFT_BLACK); // Clear screen to navy background
   changeTextSize(DEFAULT_TEXT_SIZE);
   changeTextColor(YELLOW);
   moveCursor(0, 0);
+  Serial.println("HERE2");
+
 }
 
 void PipBoyDisplay::changeTextSize(uint8_t size) {
@@ -42,7 +45,7 @@ void PipBoyDisplay::typeStringLn(char* txt, bool speed) {
 }
 
 void PipBoyDisplay::clear() {
-  _tft.fillScreen(ILI9341_BLACK);
+  _tft.fillScreen(TFT_BLACK);
 }
 
 void PipBoyDisplay::drawRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
