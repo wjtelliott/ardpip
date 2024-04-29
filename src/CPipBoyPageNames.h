@@ -1,9 +1,17 @@
+/***************************************************************************************
+** File Name  :         CPipBoyPageNames.h
+** Author     :         WJTE
+** Date       :         4/28/2024
+** Description:         All of the Page and category names to display, as well as marco'd
+**                      arrays for iterating through them.
+***************************************************************************************/
+
 #define STAT_PAGE "Stats"
 #define STAT_CATEGORY1 "STATS"
 #define STAT_CATEGORY2 "CONDITION"
 #define STAT_CATEGORY3 "S.P.E.C.I.A.L."
 #define STAT_CATEGORY4 "HEALTH"
-#define STAT_CATEGORY5 "SOMETHING OTHER CATEGORY"
+#define STAT_CATEGORY5 "SOME OTHER CATEGORY"
 #define STAT_CATEGORIES { STAT_CATEGORY1, STAT_CATEGORY2, STAT_CATEGORY3, STAT_CATEGORY4, STAT_CATEGORY5 }
 
 #define INVENTORY_PAGE "Inventory"

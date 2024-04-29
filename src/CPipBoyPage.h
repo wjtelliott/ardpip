@@ -1,12 +1,16 @@
+/***************************************************************************************
+** File Name  :         CPipBoyPage.h
+** Author     :         WJTE
+** Date       :         4/28/2024
+** Description:         PipBoy page class. This class will handle the data to display on
+**                      the current viewing page. It will also hold which categories
+**                      are on the page.
+***************************************************************************************/
+
 #ifndef PipBoyPage_h
 #define PipBoyPage_h
 
 #include <Arduino.h>
-
-struct Item {
-  char* name;
-  char* categoryName;
-};
 
 class PipBoyPage {
   private:
@@ -14,7 +18,7 @@ class PipBoyPage {
     uint8_t _currentPageCategory;
     uint8_t _currentHighlightedItem;
     char *_categories[5];
-    Item _items[20];
+    uint16_t _items[24];
     void assertCategoryInBounds();
     void assertItemInBounds();
   public:
@@ -31,9 +35,11 @@ class PipBoyPage {
 
     char* getAllCategoryNamesForPage();
     char* getAllItemNamesForPage();
-    char* getContents();
-    void pushItem(Item);
-    void removeItem(Item);
+    void pushItem(uint16_t);
+    void removeItem(uint16_t);
+
+    uint16_t getItemCount();
+    uint16_t getItemCode(uint16_t);
 };
 
 #endif

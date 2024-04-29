@@ -1,125 +1,114 @@
+/***************************************************************************************
+** File Name  :         CPipBoy.cpp
+** Author     :         WJTE
+** Date       :         4/28/2024
+** Description:         Implementation of our CPipBoy class
+***************************************************************************************/
+
 #include <Arduino.h>
 #include "CPipBoy.h"
 #include "pins.h"
-#include "CWeapons.h"
-#include "CStats.h"
-#include "CConditions.h"
-#include "CSpecials.h"
-#include "CApparel.h"
-#include "CAid.h"
-#include "CHealth.h"
-#include "CAmmo.h"
-#include "CSomethingElses.h"
-#include "CMiscs.h"
-#include "CQuests.h"
-#include "CNotes.h"
-#include "CRadios.h"
+#include "CItems.h"
 
-
-#define NO_PAGE_ERROR "No Page!"
+// enable/disable this if we need to invert the horz rotary on the hardware
+#define INVERT_LEFT_RIGHT_ROTARY
 
 PipBoy::PipBoy() {}
 
-//
-// Used in calculating free memory.
-//
-extern unsigned int __bss_end;
-extern void *__brkval;
+/***************************************************************************************
+** Helpers
+***************************************************************************************/
 
-//
-// Returns the current amount of free memory in bytes.
-//
-int freeMemory() {
-	int free_memory;
-	if ((int) __brkval)
-		return ((int) &free_memory) - ((int) __brkval);
-	return ((int) &free_memory) - ((int) &__bss_end);
+void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
+  if (!*needsRedraw) return;
+  display->clear();
+  *needsRedraw = false;
+  display->moveCursor(25,50);
+  display->typeString(pip->getPageName(), true);
+  display->typeString(" - ", true);
+  display->typeStringLn(pip->getCategoryName(), true);
+  display->typeStringLn("", true);
+  uint16_t sizeOfItems = pip->getPageItemCount();
+  for (uint16_t i = 0; i < sizeOfItems; i++) {
+    uint16_t itemCode = pip->getPageItemCode(i);
+    if (itemCode == 0) continue;
+    BaseItem item = getItemData(itemCode);
+    if (item.categoryName != pip->getCategoryName()) continue;
+    display->typeStringLn(item.name, true);
+  }
 }
 
+// use this to cycle through all pages when hardware isn't hooked up completely yet
+void test(PipBoy* pip) {
+  auto catName = pip->getCategoryName();
+  pip->changeCategory(1);
+  if (
+    // change page when all categories are viewed
+    catName == STAT_CATEGORY5 ||
+    catName == INVENTORY_CATEGORY5 ||
+    catName == DATA_CATEGORY5
+  ) {
+    pip->changePage(1);
+  }
+  delay(1750);
+}
+
+int* getLastVoltagePointer(char* type, PipBoy* pip) {
+  if (type == "leftright") return pip->getLastCategoryVoltage();
+  // if (type == "updown") return &lastPageUpDownVoltage;
+  if (type == "page") return pip->getLastPageSelectVoltage();
+}
+
+int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
+  uint8_t CLK = pip->getControllerTypeInfo(rotaryType, "CLK");
+  uint8_t DT = pip->getControllerTypeInfo(rotaryType, "DT");
+  int *lastRotateVoltage = getLastVoltagePointer(rotaryType, pip);
+
+  auto newRotateVoltage = digitalRead(CLK);
+  if (*lastRotateVoltage == newRotateVoltage) return 0;
+  *lastRotateVoltage = newRotateVoltage;
+  if (newRotateVoltage == HIGH) return 0;
+
+  auto direction = digitalRead(DT);
+  delay(100);
+  return direction == HIGH ? _CLOCKWISE : _COUNTER_CLOCKWISE;
+}
+
+/***************************************************************************************
+** Void methods
+***************************************************************************************/
 void PipBoy::init() {
   _currentPage = 0;
   _needsPageRedraw = true;
+  _display.init();
+
   size_t pageCount = sizeof(_pages)/sizeof(_pages[0]);
   for (uint8_t i = 0; i < pageCount; i++) {
     _pages[i]->setupPage();
   }
 
-  _changePageRotary = { ENCODER_CLK, ENCODER_DT, ENCODER_SW };
-  _pageHorizontalRotary = { PAGE_LEFT_RIGHT_CLK, PAGE_LEFT_RIGHT_DT, PAGE_LEFT_RIGHT_SW };
-  _pageVerticalRotary = { PAGE_UP_DOWN_CLK, PAGE_UP_DOWN_DT, PAGE_UP_DOWN_SW };
+  Rotary rotaries[] = { _changePageRotary, _pageHorizontalRotary, _pageVerticalRotary };
+  int outputPins[] = { STAT_LIGHT, INV_LIGHT, DATA_LIGHT };
 
-  _display.init();
-
-  // this looks gross for right now, but this is how it's gonna be until i make it more dry... :(
-  // stats
-  Item allStats[] = STATS;
-  for (uint8_t i = 0; i < sizeof(allStats)/sizeof(allStats[0]) && i < 20; i++) {
-    _pages[0]->pushItem(allStats[i]);
-  }
-  Item allConditions[] = CONDITIONS;
-  for (uint8_t i = 0; i < sizeof(allConditions)/sizeof(allConditions[0]) && i < 20; i++) {
-    _pages[0]->pushItem(allConditions[i]);
-  }
-  Item allSpecials[] = SPECIALS;
-  for (uint8_t i = 0; i < sizeof(allSpecials)/sizeof(allSpecials[0]) && i < 20; i++) {
-    _pages[0]->pushItem(allSpecials[i]);
-  }
-  Item allHealths[] = STATS_HEALTHS;
-  for (uint8_t i = 0; i < sizeof(allHealths)/sizeof(allHealths[0]) && i < 20; i++) {
-    _pages[0]->pushItem(allHealths[i]);
-  }
-  Item allSomethingElses[] = STATS_1;
-  for (uint8_t i = 0; i < sizeof(allSomethingElses)/sizeof(allSomethingElses[0]) && i < 20; i++) {
-    _pages[0]->pushItem(allSomethingElses[i]);
+  for (uint8_t i = 0; i < sizeof(rotaries)/sizeof(rotaries[0]); i++) {
+    pinMode(rotaries[i].CLK, INPUT);
+    pinMode(rotaries[i].DT, INPUT);
+    pinMode(rotaries[i].SW, INPUT_PULLUP);
   }
 
-  Serial.print("Free mem left: "); Serial.println(freeMemory());
+  for (uint8_t i = 0; i < sizeof(outputPins)/sizeof(outputPins[0]); i++) {
+    pinMode(outputPins[i], OUTPUT);
+  }
 
-  // inventory
-  Item allPistols[] = PISTOLS;
-  for (uint8_t i = 0; i < sizeof(allPistols)/sizeof(allPistols[0]) && i < 20; i++) {
-    _pages[1]->pushItem(allPistols[i]);
-  }
-  Item allApparel[] = ARMORS;
-  for (uint8_t i = 0; i < sizeof(allApparel)/sizeof(allApparel[0]) && i < 20; i++) {
-    _pages[1]->pushItem(allApparel[i]);
-  }
-  Item allAids[] = MEDS;
-  for (uint8_t i = 0; i < sizeof(allAids)/sizeof(allAids[0]) && i < 20; i++) {
-    _pages[1]->pushItem(allAids[i]);
-  }
-  Item allAmmos[] = AMMOS;
-  for (uint8_t i = 0; i < sizeof(allAmmos)/sizeof(allAmmos[0]) && i < 20; i++) {
-    _pages[1]->pushItem(allAmmos[i]);
-  }
-  Item allMisc[] = ALL_MISCS;
-  for (uint8_t i = 0; i < sizeof(allMisc)/sizeof(allMisc[0]) && i < 20; i++) {
-    _pages[1]->pushItem(allMisc[i]);
-  }
-  Serial.print("Free mem left: "); Serial.println(freeMemory());
 
-  // data page stuff
-  // Item allWorldMap[] = PISTOLS;
-  // for (uint8_t i = 0; i < sizeof(allWorldMap)/sizeof(allWorldMap[0]) && i < 20; i++) {
-  //   _pages[2]->pushItem(allWorldMap[i]);
-  // }
-  // Item allLocalMap[] = ARMORS;
-  // for (uint8_t i = 0; i < sizeof(allLocalMap)/sizeof(allLocalMap[0]) && i < 20; i++) {
-  //   _pages[2]->pushItem(allLocalMap[i]);
-  // }
-  Item allQuests[] = QUESTS;
-  for (uint8_t i = 0; i < sizeof(allQuests)/sizeof(allQuests[0]) && i < 20; i++) {
-    _pages[2]->pushItem(allQuests[i]);
-  }
-  Item allNotes[] = NOTES;
-  for (uint8_t i = 0; i < sizeof(allNotes)/sizeof(allNotes[0]) && i < 20; i++) {
-    _pages[2]->pushItem(allNotes[i]);
-  }
-  Item allRadios[] = RADIOS;
-  for (uint8_t i = 0; i < sizeof(allRadios)/sizeof(allRadios[0]) && i < 20; i++) {
-    _pages[2]->pushItem(allRadios[i]);
-  }
-  Serial.print("Free mem left: "); Serial.println(freeMemory());
+  // default inventory start
+  const uint16_t statItemCodes[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
+  const uint16_t invItemCodes[] = { 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222 };
+  const uint16_t dataItemCodes[] = { 800, 801, 802, 803, 804, 805, 806 };
+
+  for (uint8_t i = 0; i < sizeof(statItemCodes)/sizeof(statItemCodes[0]); i++) _pages[0]->pushItem(statItemCodes[i]);
+  for (uint8_t i = 0; i < sizeof(invItemCodes)/sizeof(invItemCodes[0]); i++) _pages[1]->pushItem(invItemCodes[i]);
+  for (uint8_t i = 0; i < sizeof(dataItemCodes)/sizeof(dataItemCodes[0]); i++) _pages[2]->pushItem(dataItemCodes[i]);
 }
 
 void PipBoy::updatePipLights() {
@@ -130,6 +119,7 @@ void PipBoy::updatePipLights() {
 }
 
 void PipBoy::boot() {
+  _display.clear();
   char* garbage = malloc(0);
   buildGarbageBootData(garbage);
   printGarbageBootData(garbage, 3);
@@ -170,6 +160,7 @@ void PipBoy::printGarbageBootData(char* txt, uint8_t amount) {
     _display.typeString(txt, true);
   }
 }
+
 void PipBoy::printBootIntro() {
   const char* bootIntro[] = {
     _boot1,
@@ -192,8 +183,8 @@ void PipBoy::printBootIntro() {
 
 void PipBoy::haltAndBlinkCursor(uint8_t amount) {
   if (amount < 1) return;
-  auto x = _display.getCursorX();
-  auto y = _display.getCursorY();
+  uint16_t x = _display.getCursorX();
+  uint16_t y = _display.getCursorY();
   auto width = 12;
   auto height = 20;
   auto blinkDelay = 500;
@@ -206,11 +197,14 @@ void PipBoy::haltAndBlinkCursor(uint8_t amount) {
   }
 }
 
+void PipBoy::throwError(char* message) {
+  _display.displayError(message);
+}
+
 void PipBoy::assertPageInScope() {
   size_t pageCount = sizeof(_pages)/sizeof(_pages[0]);
   if (_currentPage < pageCount) return;
-  Serial.println("ERR00: Page count out of bounds");
-  for(;;);
+  throwError("Page index out of bounds.");
 }
 
 void PipBoy::moveHighlightedItem(int8_t direction) {}
@@ -236,27 +230,53 @@ void PipBoy::changeCategory(int8_t direction) {
   if (sanitizedDirection) _needsPageRedraw = true;
 }
 
+void PipBoy::tick() {
+  updatePipLights();
+  int8_t newPageDirection = getPageDirection();
+  if (newPageDirection) changePage(newPageDirection);
+  else {
+    int8_t newCategoryDirection = getCategoryDirection();
+    if (newCategoryDirection) changeCategory(newCategoryDirection);
+  }
+  redrawPage(&_needsPageRedraw, &_display, this);
+  // test(this);
+}
+
+/***************************************************************************************
+** Getters
+***************************************************************************************/
+uint8_t PipBoy::getControllerTypeInfo(char* type, char* pinType) {
+  if (type == "leftright") {
+    return pinType == "CLK" ? _pageHorizontalRotary.CLK : _pageHorizontalRotary.DT;
+  }
+  if (type == "updown") {
+    return pinType == "CLK" ? _pageVerticalRotary.CLK : _pageVerticalRotary.DT;
+  }
+  if (type == "page") {
+    return pinType == "CLK" ? _changePageRotary.CLK : _changePageRotary.DT;
+  }
+  return 255;
+}
+
 char* PipBoy::getPageName() {
   assertPageInScope();
   return _pages[_currentPage]->getPageName();
 }
+
 char* PipBoy::getCategoryName() {
   assertPageInScope();
   return _pages[_currentPage]->getCategoryName();
 }
+
 char* PipBoy::getHighlightedItem() {
   assertPageInScope();
   return "highlight";
 }
 
-char* PipBoy::getPageContents() {
-  assertPageInScope();
-  return _pages[_currentPage]->getContents();
-}
-
 char* PipBoy::getAllPageNames() {
   return "";
 }
+
 char* PipBoy::getAllCategoryNamesForPage(uint8_t pageId) {
   return "";
 }
@@ -264,36 +284,12 @@ char* PipBoy::getAllItemNamesForPage(uint8_t pageId) {
   return "";
 }
 
-void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
-  if (!*needsRedraw) return;
-  display->clear();
-  *needsRedraw = false;
-  display->moveCursor(25,50);
-  display->typeString(pip->getPageName(), true);
-  display->typeString(" - ", true);
-  display->typeStringLn(pip->getCategoryName(), true);
-  display->typeStringLn(pip->getPageContents(), true);
+uint16_t PipBoy::getPageItemCount() {
+  return _pages[_currentPage]->getItemCount();
 }
 
-void test(PipBoy* pip) {
-  auto catName = pip->getCategoryName();
-  pip->changeCategory(1);
-  if (catName == STAT_CATEGORY5 || catName == INVENTORY_CATEGORY5 || catName == DATA_CATEGORY5) {
-    pip->changePage(1);
-  }
-  delay(1750);
-}
-
-void PipBoy::tick() {
-  // updatePipLights();
-  // int8_t newPageDirection = getPageDirection();
-  // if (newPageDirection) changePage(newPageDirection);
-  // else {
-  //   int8_t newCategoryDirection = getCategoryDirection();
-  //   if (newCategoryDirection) changeCategory(newCategoryDirection);
-  // }
-  redrawPage(&_needsPageRedraw, &_display, this);
-  test(this);
+uint16_t PipBoy::getPageItemCode(uint16_t idx) {
+  return _pages[_currentPage]->getItemCode(idx);
 }
 
 int* PipBoy::getLastPageSelectVoltage() {
@@ -304,46 +300,16 @@ int* PipBoy::getLastCategoryVoltage() {
   return &_lastCategorySelectVoltage;
 }
 
-uint8_t getControllerTypeInfo(char* type, char* pinType) {
-  if (type == "leftright") {
-    return pinType == "CLK" ? PAGE_LEFT_RIGHT_CLK : PAGE_LEFT_RIGHT_DT;
-  }
-  if (type == "updown") {
-    return pinType == "CLK" ? PAGE_UP_DOWN_CLK : PAGE_UP_DOWN_DT;
-  }
-  if (type == "page") {
-    return pinType == "CLK" ? ENCODER_CLK : ENCODER_DT;
-  }
-  return 255;
-}
-
-int* getLastVoltagePointer(char* type, PipBoy* pip) {
-  if (type == "leftright") return pip->getLastCategoryVoltage();
-  // if (type == "updown") return &lastPageUpDownVoltage;
-  if (type == "page") return pip->getLastPageSelectVoltage();
-  return 255; // C doesn't throw, we just assume this won't break and hope for the best
-}
-
-int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
-  uint8_t CLK = getControllerTypeInfo(rotaryType, "CLK");
-  uint8_t DT = getControllerTypeInfo(rotaryType, "DT");
-  int *lastRotateVoltage = getLastVoltagePointer(rotaryType, pip);
-
-  auto newRotateVoltage = digitalRead(CLK);
-  if (*lastRotateVoltage == newRotateVoltage) return 0;
-  *lastRotateVoltage = newRotateVoltage;
-  if (newRotateVoltage == HIGH) return 0;
-
-  auto direction = digitalRead(DT);
-  delay(100);
-  return direction == HIGH ? _CLOCKWISE : _COUNTER_CLOCKWISE;
-}
-
 // will return either a -1,0,1. this will apply to the change page function
 int8_t PipBoy::getPageDirection() {
   return getRotateStateOfRotaryButton("page", this);
 }
 
+// for some reason this is being inverted on our hardware???
 int8_t PipBoy::getCategoryDirection() {
-  return getRotateStateOfRotaryButton("leftright", this);
+  int8_t rotaryDirection = getRotateStateOfRotaryButton("leftright", this);
+#ifdef INVERT_LEFT_RIGHT_ROTARY
+  return -rotaryDirection;
+#endif
+  return rotaryDirection;
 }

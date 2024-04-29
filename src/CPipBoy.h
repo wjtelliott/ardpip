@@ -1,3 +1,11 @@
+/***************************************************************************************
+** File Name  :         CPipBoy.h
+** Author     :         WJTE
+** Date       :         4/28/2024
+** Description:         Main refernce for tying our other classes and systems
+**                      together to create our desired "pip boy" look and feel.
+***************************************************************************************/
+
 #ifndef PipBoy_h
 #define PipBoy_h
 
@@ -6,7 +14,7 @@
 #include "CPipBoyPage.h"
 #include "CPipBoyDisplay.h"
 
-// rotary
+// rotary direction macros
 #define _CLOCKWISE 1
 #define _COUNTER_CLOCKWISE -1
 
@@ -49,15 +57,15 @@ class PipBoy {
   private:
     uint8_t _currentPage;
     bool _needsPageRedraw;
-    
-    Rotary _changePageRotary;
-    Rotary _pageHorizontalRotary;
-    Rotary _pageVerticalRotary;
+
+    Rotary _changePageRotary = { PAGE_SELECT_CLK, PAGE_SELECT_DT, PAGE_SELECT_SW };
+    Rotary _pageHorizontalRotary = { PAGE_LEFT_RIGHT_CLK, PAGE_LEFT_RIGHT_DT, PAGE_LEFT_RIGHT_SW };
+    Rotary _pageVerticalRotary = { PAGE_UP_DOWN_CLK, PAGE_UP_DOWN_DT, PAGE_UP_DOWN_SW };
 
     const PipBoyPage *_pages[3] = {
       new PipBoyPage(STAT_PAGE),
       new PipBoyPage(INVENTORY_PAGE),
-      new PipBoyPage(DATA_PAGE)
+      new PipBoyPage(DATA_PAGE),
     };
 
     int _lastPageSelectVoltage = HIGH;
@@ -70,6 +78,7 @@ class PipBoy {
     void haltAndBlinkCursor(uint8_t);
 
     // exception checks
+    void throwError(char*);
     void assertPageInScope();
 
     // init/loop funcs
@@ -100,9 +109,11 @@ class PipBoy {
     char* getAllPageNames();
     char* getAllCategoryNamesForPage(uint8_t);
     char* getAllItemNamesForPage(uint8_t);
-    char* getPageContents();
     int* getLastPageSelectVoltage();
     int* getLastCategoryVoltage();
+    uint8_t getControllerTypeInfo(char*, char*);
+    uint16_t getPageItemCount();
+    uint16_t getPageItemCode(uint16_t);
 };
 
 #endif

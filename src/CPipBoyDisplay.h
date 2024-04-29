@@ -1,3 +1,12 @@
+/***************************************************************************************
+** File Name  :         CPipBoyDisplay.h
+** Author     :         WJTE
+** Date       :         4/28/2024
+** Description:         Interface from our tft library to our codebase. Handles changing
+**                      the text color, font, size, and displaying text and images on the
+**                      screen.
+***************************************************************************************/
+
 #ifndef PipBoyDisplay_h
 #define PipBoyDisplay_h
 
@@ -18,10 +27,7 @@
 
 class PipBoyDisplay {
   private:
-    TFT_HX8357 _tft;       // Invoke custom library
-    // Adafruit_ILI9341 _tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
-    uint8_t _textSize;
-    uint16_t _textColor;
+    TFT_HX8357 _tft;
     const uint16_t _COLORS[5] = {
       TFT_RED,
       TFT_BLUE,
@@ -41,8 +47,9 @@ class PipBoyDisplay {
     void clear();
     void drawRect(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
     void fillRect(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
-    uint8_t getCursorX();
-    uint8_t getCursorY();
+    void displayError(char*);
+    uint16_t getCursorX();
+    uint16_t getCursorY();
 };
 
 #endif
