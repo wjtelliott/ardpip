@@ -23,7 +23,7 @@
 #define YELLOW 3
 #define BLACK 4
 #define WRITE_DELAY 30
-#define FAST_WRITE_DELAY 3
+#define FAST_WRITE_DELAY 0
 
 class PipBoyDisplay {
   private:
@@ -46,8 +46,10 @@ class PipBoyDisplay {
     void typeStringLn(char*, bool);
     void clear();
     void drawRect(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
-    void fillRect(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
+    void fillRect(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
     void displayError(char*);
+    void drawSDImage(char*);
+    void drawImage(uint16_t, uint16_t, uint8_t*, uint16_t, uint16_t, uint16_t);
     uint16_t getCursorX();
     uint16_t getCursorY();
 };

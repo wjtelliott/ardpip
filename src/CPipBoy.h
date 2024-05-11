@@ -8,6 +8,7 @@
 
 #ifndef PipBoy_h
 #define PipBoy_h
+#include "CLinkedList.h"
 
 #include <Arduino.h>
 #include "CPipBoyPageNames.h"
@@ -45,7 +46,12 @@
 #define _boot9 "38911 BYTES FREE"
 #define _boot10 "NO HOLOTAPE FOUND"
 #define _boot11 "LOAD ROM(1): DEITRIX 303"
+
+// array size macros
 #define INTRO_SIZE sizeof(bootIntro)/sizeof(bootIntro[0])
+#define PAGE_SIZE sizeof(_pages)/sizeof(_pages[0])
+#define ROTARY_COUNT sizeof(rotaries)/sizeof(rotaries[0])
+#define OUTPUT_PIN_COUNT sizeof(outputPins)/sizeof(outputPins[0])
 
 struct Rotary {
   uint8_t CLK;
@@ -93,6 +99,7 @@ class PipBoy {
     void init();
     void boot();
     void tick();
+    void sandbox();
 
     // ui management
     void updatePipLights();
@@ -108,12 +115,10 @@ class PipBoy {
     char* getHighlightedItem();
     char* getAllPageNames();
     char* getAllCategoryNamesForPage(uint8_t);
-    char* getAllItemNamesForPage(uint8_t);
+    LinkedList getAllItemNamesForPage();
     int* getLastPageSelectVoltage();
     int* getLastCategoryVoltage();
     uint8_t getControllerTypeInfo(char*, char*);
-    uint16_t getPageItemCount();
-    uint16_t getPageItemCode(uint16_t);
 };
 
 #endif

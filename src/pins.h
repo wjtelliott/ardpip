@@ -24,3 +24,6 @@
 #define STAT_LIGHT 2
 #define INV_LIGHT 3
 #define DATA_LIGHT 4
+
+// sd card reader
+#define SDC_CS 53

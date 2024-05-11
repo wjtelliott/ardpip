@@ -9,6 +9,7 @@
 
 #ifndef PipBoyPage_h
 #define PipBoyPage_h
+#include "CLinkedList.h"
 
 #include <Arduino.h>
 
@@ -18,7 +19,7 @@ class PipBoyPage {
     uint8_t _currentPageCategory;
     uint8_t _currentHighlightedItem;
     char *_categories[5];
-    uint16_t _items[24];
+    LinkedList _items[5];
     void assertCategoryInBounds();
     void assertItemInBounds();
   public:
@@ -34,12 +35,9 @@ class PipBoyPage {
     char* getHighlightedItem();
 
     char* getAllCategoryNamesForPage();
-    char* getAllItemNamesForPage();
-    void pushItem(uint16_t);
-    void removeItem(uint16_t);
-
-    uint16_t getItemCount();
-    uint16_t getItemCode(uint16_t);
+    LinkedList getAllItemNamesForPage();
+    void pushItem(uint16_t, Item*);
+    void removeItem(uint16_t, uint16_t);
 };
 
 #endif

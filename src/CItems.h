@@ -10,56 +10,85 @@
 // The arduino we are using doesn't have enough onboard RAM to support all of these in memory.
 // We are going to instead create a bunch of macros and a switch to grab the needed character strings.
 // This will keep the data on the flashed ROM instead.
-
-// this _REALLY_ sucks, but it will work for now
 #ifndef CItems_h
 #define CItems_h
 #include "CPipBoyPageNames.h"
+#include "CLinkedList.h"
 
 // Things like stats / specials / radios / quests are considered items for now
+#define STAT_HEALTH_ID 1
+#define STAT_RADIATION_ID 2
+#define STAT_LEVEL_ID 3
+#define CONDITION_RADIATION_ID 4
+#define CONDITION_POISONED_ID 5
+#define SPECIAL_STRENGTH_ID 6
+#define SPECIAL_PERCEPTION_ID 7
+#define SPECIAL_ENDURANCE_ID 8
+#define SPECIAL_CHARISMA_ID 9
+#define SPECIAL_INTELLIGENCE_ID 10
+#define SPECIAL_AGILITY_ID 11
+#define SPECIAL_LUCK_ID 12
+#define HEALTH_BROKEN_LEG_ID 13
+#define HEALTH_BROKEN_ARM_ID 14
+#define STAT_1_BROKEN_LEG_ID 15
+#define STAT_1_BROKEN_ARM_ID 16
+
+Item *getItem(uint16_t itemCode) {
+  switch (itemCode) {
+    default: return new Item();
+
+    // Stat page - Stats
+    case STAT_HEALTH_ID: return new Item("HEALTH    : 100/100", 1);
+    case STAT_RADIATION_ID: return new Item("RADIATION : SEVERE", 1);
+    case STAT_LEVEL_ID: return new Item("LEVEL     : 4", 1);
+
+    // stat page - conditions
+    case CONDITION_RADIATION_ID: return new Item("Severe readiation", 1);
+    case CONDITION_POISONED_ID: return new Item("Poisoned", 1);
+
+    // stat page - s.p.e.c.i.a.l.
+    case SPECIAL_STRENGTH_ID: return new Item("STRENGTH     : 5", 1);
+    case SPECIAL_PERCEPTION_ID: return new Item("PERCEPTION   : 7", 1);
+    case SPECIAL_ENDURANCE_ID: return new Item("ENDURANCE    : 4", 1);
+    case SPECIAL_CHARISMA_ID: return new Item("CHARISMA     : 2", 1);
+    case SPECIAL_INTELLIGENCE_ID: return new Item("INTELLIGENCE : 8", 1);
+    case SPECIAL_AGILITY_ID: return new Item("AGILITY      : 2", 1);
+    case SPECIAL_LUCK_ID: return new Item("LUCK         : 1", 1);
+
+    case HEALTH_BROKEN_LEG_ID: return new Item("Broken leg", 1);
+    case HEALTH_BROKEN_ARM_ID: return new Item("Broken arm", 1);
+
+    case STAT_1_BROKEN_LEG_ID: return new Item("sample data...", 1);
+    case STAT_1_BROKEN_ARM_ID: return new Item("lorem ipsum", 1);
+  }
+}
 
 // *************** STAT PAGE ****************** //
 #define STAT STAT_CATEGORY1
 #define STAT_HEALTH    { "HEALTH   : 100/100", STAT }
-#define STAT_HEALTH_ID 1
 #define STAT_RADIATION { "RADIATION: SEVERE", STAT }
-#define STAT_RADIATION_ID 2
 #define STAT_LEVEL     { "LEVEL    : 4", STAT }
-#define STAT_LEVEL_ID 3
 
 #define CONDITION STAT_CATEGORY2
 #define CONDITION_RADIATION { "Severe radiation", CONDITION }
-#define CONDITION_RADIATION_ID 4
 #define CONDITION_POISONED { "Poisoned", CONDITION }
-#define CONDITION_POISONED_ID 5
 
 #define SPECIAL STAT_CATEGORY3
 #define SPECIAL_STRENGTH     { "STRENGTH     : 5", SPECIAL }
-#define SPECIAL_STRENGTH_ID 6
 #define SPECIAL_PERCEPTION   { "PERCEPTION   : 7", SPECIAL }
-#define SPECIAL_PERCEPTION_ID 7
 #define SPECIAL_ENDURANCE    { "ENDURANCE    : 4", SPECIAL }
-#define SPECIAL_ENDURANCE_ID 8
 #define SPECIAL_CHARISMA     { "CHARISMA     : 2", SPECIAL }
-#define SPECIAL_CHARISMA_ID 9
 #define SPECIAL_INTELLIGENCE { "INTELLIGENCE : 8", SPECIAL }
-#define SPECIAL_INTELLIGENCE_ID 10
 #define SPECIAL_AGILITY      { "AGILITY      : 2", SPECIAL }
-#define SPECIAL_AGILITY_ID 11
 #define SPECIAL_LUCK         { "LUCK         : 1", SPECIAL }
-#define SPECIAL_LUCK_ID 12
 
 #define HEALTH STAT_CATEGORY4
 #define HEALTH_BROKEN_LEG { "Crippled leg", HEALTH }
-#define HEALTH_BROKEN_LEG_ID 13
 #define HEALTH_BROKEN_ARM { "Crippled arm", HEALTH }
-#define HEALTH_BROKEN_ARM_ID 14
 
 #define STAT_1 STAT_CATEGORY5
 #define STAT_1_BROKEN_LEG { "sample data", STAT_1 }
-#define STAT_1_BROKEN_LEG_ID 15
 #define STAT_1_BROKEN_ARM { "lorem ipsum", STAT_1 }
-#define STAT_1_BROKEN_ARM_ID 16
 
 // *************** INVENTORY PAGE ****************** //
 #define WEAPON INVENTORY_CATEGORY1

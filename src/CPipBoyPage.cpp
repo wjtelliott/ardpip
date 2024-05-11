@@ -13,30 +13,6 @@ PipBoyPage::PipBoyPage(char* pageName) {
   _currentPageCategory = 0;
   _currentHighlightedItem = 0;
   _name = pageName;
-  _items[0] = 0;
-  _items[1] = 0;
-  _items[2] = 0;
-  _items[3] = 0;
-  _items[4] = 0;
-  _items[5] = 0;
-  _items[6] = 0;
-  _items[7] = 0;
-  _items[8] = 0;
-  _items[9] = 0;
-  _items[10] = 0;
-  _items[11] = 0;
-  _items[12] = 0;
-  _items[13] = 0;
-  _items[14] = 0;
-  _items[15] = 0;
-  _items[16] = 0;
-  _items[17] = 0;
-  _items[18] = 0;
-  _items[19] = 0;
-  _items[20] = 0;
-  _items[21] = 0;
-  _items[22] = 0;
-  _items[23] = 0;
 };
 
 void PipBoyPage::setupPage() {
@@ -94,13 +70,6 @@ char* PipBoyPage::getCategoryNameAtIndex(uint8_t idx) {
 }
 char* PipBoyPage::getHighlightedItem() {}
 
-uint16_t PipBoyPage::getItemCode(uint16_t idx) {
-  return _items[idx];
-}
-
-uint16_t PipBoyPage::getItemCount() {
-  return sizeof(_items)/sizeof(_items[0]);
-}
 
 uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
   size_t size = page->getCategoryAmount();
@@ -111,22 +80,12 @@ uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
   for(;;);
 }
 
-void PipBoyPage::removeItem(uint16_t itemCode) {
-  for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
-    if (_items[i] == itemCode) {
-      _items[i] = 0;
-      return;
-    }
-  }
+void PipBoyPage::removeItem(uint16_t category, uint16_t itemIndex) {
+  _items[category].deleteAt(itemIndex);
 }
 
-void PipBoyPage::pushItem(uint16_t itemCode) {
-  for (uint8_t i = 0; i < sizeof(_items)/sizeof(_items[0]); i++) {
-    if (_items[i] == 0) {
-      _items[i] = itemCode;
-      return;
-    }
-  }
+void PipBoyPage::pushItem(uint16_t category, Item* item) {
+  _items[category].push_back(item);
 }
 
 uint8_t PipBoyPage::getCategoryAmount() {
@@ -134,4 +93,7 @@ uint8_t PipBoyPage::getCategoryAmount() {
 }
 
 char* PipBoyPage::getAllCategoryNamesForPage() {}
-char* PipBoyPage::getAllItemNamesForPage() {}
+LinkedList PipBoyPage::getAllItemNamesForPage() {
+  assertCategoryInBounds();
+  return _items[_currentPageCategory];
+}

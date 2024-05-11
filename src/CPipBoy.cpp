@@ -9,6 +9,7 @@
 #include "CPipBoy.h"
 #include "pins.h"
 #include "CItems.h"
+#include "CLinkedList.h"
 
 // enable/disable this if we need to invert the horz rotary on the hardware
 #define INVERT_LEFT_RIGHT_ROTARY
@@ -21,20 +22,29 @@ PipBoy::PipBoy() {}
 
 void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
   if (!*needsRedraw) return;
-  display->clear();
+  display->moveCursor(0, 0);
+  display->typeStringLn("  STAT    INV    DATA    MAP    RADIO        ", true);
+  display->typeStringLn("---------------------------------------------", true);
+  display->fillRect(0, 50, 225, 200, 4);
   *needsRedraw = false;
   display->moveCursor(25,50);
   display->typeString(pip->getPageName(), true);
   display->typeString(" - ", true);
   display->typeStringLn(pip->getCategoryName(), true);
   display->typeStringLn("", true);
-  uint16_t sizeOfItems = pip->getPageItemCount();
-  for (uint16_t i = 0; i < sizeOfItems; i++) {
-    uint16_t itemCode = pip->getPageItemCode(i);
-    if (itemCode == 0) continue;
-    BaseItem item = getItemData(itemCode);
-    if (item.categoryName != pip->getCategoryName()) continue;
-    display->typeStringLn(item.name, true);
+
+  LinkedList items = pip->getAllItemNamesForPage();
+  Item *curr = items.loop();
+  while (curr != nullptr) {
+    display->typeString(curr->name, true);
+    char buf[8];
+    strcpy(buf, " (");
+    char quantityAsStr[3];
+    itoa(curr->quantity, quantityAsStr, 10);
+    strcat(buf, quantityAsStr);
+    strcat(buf, ")");
+    display->typeStringLn(curr->quantity > 1 ? buf : "", true);
+    curr = items.nextItem();
   }
 }
 
@@ -74,6 +84,34 @@ int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
   return direction == HIGH ? _CLOCKWISE : _COUNTER_CLOCKWISE;
 }
 
+void setUpStatPage(PipBoyPage *page) {
+  // stats
+  page->pushItem(0, getItem(STAT_HEALTH_ID));
+  page->pushItem(0, getItem(STAT_RADIATION_ID));
+  page->pushItem(0, getItem(STAT_LEVEL_ID));
+
+  // conditions
+  page->pushItem(1, getItem(CONDITION_RADIATION_ID));
+  page->pushItem(1, getItem(CONDITION_POISONED_ID));
+
+  // s.p.e.c.i.a.l.s
+  page->pushItem(2, getItem(SPECIAL_STRENGTH_ID));
+  page->pushItem(2, getItem(SPECIAL_PERCEPTION_ID));
+  page->pushItem(2, getItem(SPECIAL_ENDURANCE_ID));
+  page->pushItem(2, getItem(SPECIAL_CHARISMA_ID));
+  page->pushItem(2, getItem(SPECIAL_INTELLIGENCE_ID));
+  page->pushItem(2, getItem(SPECIAL_AGILITY_ID));
+  page->pushItem(2, getItem(SPECIAL_LUCK_ID));
+
+  //health
+  page->pushItem(3, getItem(HEALTH_BROKEN_LEG_ID));
+  page->pushItem(3, getItem(HEALTH_BROKEN_ARM_ID));
+
+  //something else
+  page->pushItem(4, getItem(STAT_1_BROKEN_LEG_ID));
+  page->pushItem(4, getItem(STAT_1_BROKEN_ARM_ID));
+}
+
 /***************************************************************************************
 ** Void methods
 ***************************************************************************************/
@@ -82,33 +120,29 @@ void PipBoy::init() {
   _needsPageRedraw = true;
   _display.init();
 
-  size_t pageCount = sizeof(_pages)/sizeof(_pages[0]);
-  for (uint8_t i = 0; i < pageCount; i++) {
+  delay(2000);
+
+  for (uint8_t i = 0; i < PAGE_SIZE; i++) {
     _pages[i]->setupPage();
   }
 
   Rotary rotaries[] = { _changePageRotary, _pageHorizontalRotary, _pageVerticalRotary };
   int outputPins[] = { STAT_LIGHT, INV_LIGHT, DATA_LIGHT };
 
-  for (uint8_t i = 0; i < sizeof(rotaries)/sizeof(rotaries[0]); i++) {
+  for (uint8_t i = 0; i < ROTARY_COUNT; i++) {
     pinMode(rotaries[i].CLK, INPUT);
     pinMode(rotaries[i].DT, INPUT);
     pinMode(rotaries[i].SW, INPUT_PULLUP);
   }
 
-  for (uint8_t i = 0; i < sizeof(outputPins)/sizeof(outputPins[0]); i++) {
+  for (uint8_t i = 0; i < OUTPUT_PIN_COUNT; i++) {
     pinMode(outputPins[i], OUTPUT);
   }
 
-
-  // default inventory start
-  const uint16_t statItemCodes[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-  const uint16_t invItemCodes[] = { 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220, 221, 222 };
-  const uint16_t dataItemCodes[] = { 800, 801, 802, 803, 804, 805, 806 };
-
-  for (uint8_t i = 0; i < sizeof(statItemCodes)/sizeof(statItemCodes[0]); i++) _pages[0]->pushItem(statItemCodes[i]);
-  for (uint8_t i = 0; i < sizeof(invItemCodes)/sizeof(invItemCodes[0]); i++) _pages[1]->pushItem(invItemCodes[i]);
-  for (uint8_t i = 0; i < sizeof(dataItemCodes)/sizeof(dataItemCodes[0]); i++) _pages[2]->pushItem(dataItemCodes[i]);
+  // set up default inventory
+  setUpStatPage(_pages[0]);
+  // setUpInvPage(_pages[1]);
+  // setUpDataPage(_pages[2]);
 }
 
 void PipBoy::updatePipLights() {
@@ -129,6 +163,11 @@ void PipBoy::boot() {
   printBootIntro();
   haltAndBlinkCursor(4);
   _display.clear();
+  _display.drawSDImage("fallout.bmp");
+  delay(1500);
+  _display.clear();
+  _display.drawSDImage("inv.bmp");
+  _display.fillRect(0, 0, 480, 50, 4);
 }
 
 void PipBoy::buildGarbageBootData(char* buffer) {
@@ -190,7 +229,7 @@ void PipBoy::haltAndBlinkCursor(uint8_t amount) {
   auto blinkDelay = 500;
   
   for (uint8_t i = 0; i < amount; i++) {
-    _display.fillRect(x, y, width, height, YELLOW);
+    _display.fillRect(x, y, width, height, GREEN);
     delay(blinkDelay);
     _display.fillRect(x, y, width, height, BLACK);
     delay(blinkDelay);
@@ -229,6 +268,41 @@ void PipBoy::changeCategory(int8_t direction) {
   _pages[_currentPage]->changePageCategory(sanitizedDirection);
   if (sanitizedDirection) _needsPageRedraw = true;
 }
+
+void PipBoy::sandbox() {
+  LinkedList list;
+  Item* wep = new Item("bat", 2);
+  Item* wep2 = new Item("club", 4);
+  Item* wep3 = new Item("gun", 3);
+  Item* wep4 = new Item("boomerang", 81);
+  list.push_back(wep);
+  list.push_back(wep2);
+  list.push_back(wep3);
+  list.push_back(wep4);
+
+  list.print();
+
+  Serial.println("------");
+
+  list.deleteAt(2);
+  list.print();
+
+  Item* randomItem = list.at(2);
+  list.deleteByValue(randomItem);
+
+  Serial.println("---- iterating thru all left: ----");
+  Item *currentItem = list.loop();
+  while (currentItem != nullptr) {
+    Serial.print("Item: ");
+    Serial.println(currentItem->name);
+    currentItem = list.nextItem();
+  }
+
+
+  Serial.println("done");
+  for(;;);
+}
+
 
 void PipBoy::tick() {
   updatePipLights();
@@ -280,16 +354,9 @@ char* PipBoy::getAllPageNames() {
 char* PipBoy::getAllCategoryNamesForPage(uint8_t pageId) {
   return "";
 }
-char* PipBoy::getAllItemNamesForPage(uint8_t pageId) {
-  return "";
-}
-
-uint16_t PipBoy::getPageItemCount() {
-  return _pages[_currentPage]->getItemCount();
-}
-
-uint16_t PipBoy::getPageItemCode(uint16_t idx) {
-  return _pages[_currentPage]->getItemCode(idx);
+LinkedList PipBoy::getAllItemNamesForPage() {
+  assertPageInScope();
+  return _pages[_currentPage]->getAllItemNamesForPage();
 }
 
 int* PipBoy::getLastPageSelectVoltage() {
