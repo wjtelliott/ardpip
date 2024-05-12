@@ -13,6 +13,7 @@
 #include <Arduino.h>
 #include "CPipBoyPageNames.h"
 
+// Item class, basic item data structure. add more fields as needed
 class Item {
   public:
   char* name;
@@ -26,6 +27,14 @@ class Item {
     this->quantity = q;
   }
 
+  bool operator==(Item* other) {
+    // add more fields to compare as needed
+    return
+      this->name == other->name &&
+      this->quantity == other->quantity;
+  }
+
+  // if we add more fields that are pointers, we must free that memory in here
   ~Item() {}
 };
 
@@ -57,6 +66,7 @@ class LinkedList {
   public:
   LinkedList() { head = nullptr; loopPtr = nullptr; }
 
+  // methods
   void push_back(Item*);
   void print();
   void deleteAt(int);
@@ -64,6 +74,7 @@ class LinkedList {
   void reduceQuantityAt(int, uint8_t);
   void increaseQuantityAt(int, uint8_t);
 
+  // getters
   int length();
   Item* at(int);
   Item* loop();

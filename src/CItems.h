@@ -63,6 +63,8 @@ Item *getItem(uint16_t itemCode) {
   }
 }
 
+//! everything below this point is deprecated and needs to be re-written in the above format
+
 // *************** STAT PAGE ****************** //
 #define STAT STAT_CATEGORY1
 #define STAT_HEALTH    { "HEALTH   : 100/100", STAT }

@@ -8,6 +8,7 @@
 #include "CLinkedList.h"
 #include <Arduino.h>
 
+// since we are modifying the ptrs in this method, the loopPtr is not safe when deleting
 void LinkedList::deleteAt(int index) {
   if (head == nullptr || index > length()) return;
   loopPtr = head;
@@ -45,22 +46,19 @@ void LinkedList::push_back(Item* data) {
   getTail()->next = newNode;
 }
 
+// this method is not safe to use with the loopPtr either, as we are modifying the ptrs
 void LinkedList::deleteByValue(Item *item) {
   if (head == nullptr) return;
 
   int currentIndex = 0;
   Node *curr = head;
   while (curr != nullptr) {
-    if (
-      item->name == curr->data->name &&
-      item->quantity == curr->data->quantity
-      // todo: add more here
-    ) {
+    if (*(curr->data) == item) { //todo: test this in sandbox mode. pretty sure this isn't cap yo. might be ptr fuckery abooot
       deleteAt(currentIndex);
       return;
     }
     curr = curr->next;
-    currentIndex++;
+    currentIndex++; // todo: i'm lazy rn and piggy-backing off `deleteAt` to free this memory. we _should_ be doing it here with two ptrs.
   }
 }
 
