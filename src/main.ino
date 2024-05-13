@@ -7,8 +7,8 @@
 ***************************************************************************************/
 
 // debug options (to be disabled before deploy)
-//#define NO_BOOT
-//#define NO_SERIAL_LOGS
+// #define NO_BOOT
+// #define NO_SERIAL_LOGS
 // #define SANDBOX
 
 #include "CPipBoy.h"
@@ -18,7 +18,6 @@ void setup() {
   Serial.begin(9600);
   // Wait for serializer to init
   while(!Serial){};
-  Serial.println("wtf");
   pip.init();
 #ifndef NO_BOOT
   pip.boot();
