@@ -80,6 +80,10 @@ uint8_t getIndexOfCategory(PipBoyPage* page, char* categoryName) {
   for(;;);
 }
 
+uint8_t PipBoyPage::getPageCategory() {
+  return _currentPageCategory;
+}
+
 void PipBoyPage::removeItem(uint16_t category, uint16_t itemIndex) {
   _items[category].deleteAt(itemIndex);
 }

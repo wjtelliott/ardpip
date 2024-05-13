@@ -33,6 +33,7 @@ class PipBoyPage {
     char* getCategoryNameAtIndex(uint8_t);
     uint8_t getCategoryAmount();
     char* getHighlightedItem();
+    uint8_t getPageCategory();
 
     char* getAllCategoryNamesForPage();
     LinkedList getAllItemNamesForPage();
