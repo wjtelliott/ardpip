@@ -45,11 +45,24 @@ class PipBoyDisplay {
     void typeString(char*, bool);
     void typeStringLn(char*, bool);
     void clear();
-    void drawRect(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
-    void fillRect(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
+    void drawRect(int16_t, int16_t, int16_t, int16_t, uint16_t);
+    void drawLine(int16_t, int16_t, int16_t, int16_t, uint16_t);
+    void fillRect(int16_t, int16_t, int16_t, int16_t, uint16_t);
     void displayError(char*);
     void drawSDImage(char*);
     void drawImage(uint16_t, uint16_t, uint8_t*, uint16_t, uint16_t, uint16_t);
+
+    void drawHudTopLabel();
+    void clearTopHud();
+    void drawHudBottomLabel();
+    void clearBottomHud();
+    void drawItemPageTopHud();
+    void drawStatPageTopHud();
+    void drawTopHud(uint8_t);
+    void drawBottomHud(uint8_t, uint8_t);
+    void drawItemPageBottomHud(uint8_t);
+    void drawStatPageBottomHud(uint8_t);
+
     uint16_t getCursorX();
     uint16_t getCursorY();
 };

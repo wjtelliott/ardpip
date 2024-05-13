@@ -6,146 +6,8 @@
 ***************************************************************************************/
 
 #include "CPipBoyDisplay.h"
-#include <SD.h>
-#define BUFF_SIZE 80
-
-// /***************************************************************************************
-// ** Function name:           Support functions for drawBMP()
-// ** Descriptions:            Read 16 and 32-bit types from the SD card file
-// ***************************************************************************************/
-
-// // BMP data is stored little-endian, Arduino is little-endian too.
-// // May need to reverse subscript order if porting elsewhere.
-
-uint16_t read16(File& f) {
-  uint16_t result;
-  ((uint8_t *)&result)[0] = f.read(); // LSB
-  ((uint8_t *)&result)[1] = f.read(); // MSB
-  return result;
-}
-
-uint32_t read32(File& f) {
-  uint32_t result;
-  ((uint8_t *)&result)[0] = f.read(); // LSB
-  ((uint8_t *)&result)[1] = f.read();
-  ((uint8_t *)&result)[2] = f.read();
-  ((uint8_t *)&result)[3] = f.read(); // MSB
-  return result;
-}
-
-void drawBMP(char *filename, int x, int y, boolean flip, TFT_HX8357 tft) {
-  if ((x >= tft.width()) || (y >= tft.height())) return;
-  File     bmpFile;
-  int16_t  bmpWidth, bmpHeight;   // Image W+H in pixels
-  //uint8_t  bmpDepth;            // Bit depth (must be 24) but we dont use this
-  uint32_t bmpImageoffset;        // Start address of image data in file
-  uint32_t rowSize;               // Not always = bmpWidth; may have padding
-  uint8_t  sdbuffer[3 * BUFF_SIZE];    // SD read pixel buffer (8 bits each R+G+B per pixel)
-  uint16_t tftbuffer[BUFF_SIZE];       // TFT pixel out buffer (16-bit per pixel)
-  uint8_t  sd_ptr = sizeof(sdbuffer); // sdbuffer pointer (so BUFF_SIZE must be less than 86)
-  boolean  goodBmp = false;            // Flag set to true on valid header parse
-  int16_t  w, h, row, col;             // to store width, height, row and column
-  //uint8_t  r, g, b;   // brg encoding line concatenated for speed so not used
-  uint8_t rotation;     // to restore rotation
-  uint8_t  tft_ptr = 0;  // buffer pointer
-
-  // Check file exists and open it
-  Serial.println(filename);
-  if ((bmpFile = SD.open(filename)) == NULL) {
-    Serial.println(F(" File not found")); // Can comment out if not needed
-    return;
-  }
-
-  // Parse BMP header to get the information we need
-  if (read16(bmpFile) == 0x4D42) { // BMP file start signature check
-    read32(bmpFile);       // Dummy read to throw away and move on
-    read32(bmpFile);       // Read & ignore creator bytes
-    bmpImageoffset = read32(bmpFile); // Start of image data
-    read32(bmpFile);       // Dummy read to throw away and move on
-    bmpWidth  = read32(bmpFile);  // Image width
-    bmpHeight = read32(bmpFile);  // Image height
-
-    //if (read16(bmpFile) == 1) { 
-    // Only proceed if we pass a bitmap file check
-    // Number of image planes -- must be '1', depth 24 and 0 (uncompressed format)
-    if ((read16(bmpFile) == 1) && (read16(bmpFile) == 24) && (read32(bmpFile) == 0)) {
-      //goodBmp = true; // Supported BMP format -- proceed!
-      // BMP rows are padded (if needed) to 4-byte boundary
-      rowSize = (bmpWidth * 3 + 3) & ~3;
-      // Crop area to be loaded
-      w = bmpWidth;
-      h = bmpHeight;
-
-      // We might need to alter rotation to avoid tedious pointer manipulation
-      // Save the current value so we can restore it later
-      rotation = tft.getRotation();
-      // Use TFT SGRAM coord rotation if flip is set for 25% faster rendering
-      if (flip) tft.setRotation((rotation + (flip<<2)) % 8); // Value 0-3 mapped to 4-7
-
-      // We might need to flip and calculate new y plot coordinate
-      // relative to top left corner as well...
-      switch (rotation) {
-        case 0:
-          if (flip) y = tft.height() - y - h; break;
-        case 1:
-          y = tft.height() - y - h; break;
-          break;
-        case 2:
-          if (flip) y = tft.height() - y - h; break;
-          break;
-        case 3:
-          y = tft.height() - y - h; break;
-          break;
-      }
-
-      // Set TFT address window to image bounds
-      // Currently, image will not draw or will be corrputed if it does not fit
-      // TODO -> efficient clipping, but I don't need it to be idiot proof ;-)
-      tft.setWindow(x, y, x + w - 1, y + h - 1);
-
-      // Finally we are ready to send rows of pixels, writing like this avoids slow 32 bit multiply
-      for (uint32_t pos = bmpImageoffset; pos < bmpImageoffset + h * rowSize ; pos += rowSize) {
-        // Seek if we need to on boundaries and arrange to dump buffer and start again
-        if (bmpFile.position() != pos) {
-          bmpFile.seek(pos);
-          sd_ptr = sizeof(sdbuffer);
-        }
-
-        // Fill the pixel buffer and plot
-        for (col = 0; col < w; col++) { // For each column...
-          // Time to read more pixel data?
-          if (sd_ptr >= sizeof(sdbuffer)) {
-            // Push tft buffer to the display
-            if (tft_ptr) {
-              // Here we are sending a uint16_t array to the function
-              tft.pushColors(tftbuffer, tft_ptr);
-              tft_ptr = 0; // tft_ptr and sd_ptr are not always in sync...
-            }
-            // Finally reading bytes from SD Card
-            bmpFile.read(sdbuffer, sizeof(sdbuffer));
-            sd_ptr = 0; // Set buffer index to start
-          }
-          // Convert pixel from BMP 8+8+8 format to TFT compatible 16 bit word
-          // Blue 5 bits, green 6 bits and red 5 bits (16 bits total)
-          // Is is a long line but it is faster than calling a library fn for this
-          tftbuffer[tft_ptr] = (sdbuffer[sd_ptr++] >> 3) ;
-          tftbuffer[tft_ptr] |= ((sdbuffer[sd_ptr++] & 0xFC) << 3);
-          tftbuffer[tft_ptr] |= ((sdbuffer[sd_ptr++] & 0xF8) << 8);
-          tft_ptr++;
-        } // Next row
-      }   // All rows done
-
-      // Write any partially full buffer to TFT
-      if (tft_ptr) tft.pushColors(tftbuffer, tft_ptr);
-
-    } // End of bitmap access
-  }   // End of bitmap file check
-  //}     // We can close the file now
-
-  bmpFile.close();
-  //if(!goodBmp) Serial.println(F("BMP format not recognized."));
-  tft.setRotation(rotation); // Put back original rotation
-}
+#include "CDrawBMP.h"
+#include "CPipBoyPageNames.h"
 
 PipBoyDisplay::PipBoyDisplay() {
   _tft = TFT_HX8357();
@@ -195,11 +57,16 @@ void PipBoyDisplay::clear() {
   _tft.fillScreen(TFT_BLACK);
 }
 
-void PipBoyDisplay::drawRect(uint8_t x, uint8_t y, uint8_t w, uint8_t h, uint16_t color) {
+void PipBoyDisplay::drawLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
+  // color is unused rn
+  _tft.drawLine(x1, y1, x2, y2, TFT_GREEN);
+}
+
+void PipBoyDisplay::drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
   _tft.drawRect(x, y, w, h, _COLORS[color]);
 }
 
-void PipBoyDisplay::fillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color) {
+void PipBoyDisplay::fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
   _tft.fillRect(x, y, w, h, _COLORS[color]);
 }
 
@@ -214,6 +81,205 @@ void PipBoyDisplay::drawSDImage(char* filename) {
 
 void PipBoyDisplay::drawImage(uint16_t x, uint16_t y, uint8_t *bitmap, uint16_t width, uint16_t height, uint16_t color) {
   _tft.drawBitmap(x, y, bitmap, width, height, color);
+}
+
+void PipBoyDisplay::drawHudTopLabel() {
+  drawLine(10, 40, 10, 20, 0);
+  drawLine(10, 20, 460, 20, 0);
+  drawLine(460, 20, 460, 40, 0);
+}
+void PipBoyDisplay::clearTopHud() {
+  fillRect(10, 20, 460, 35, 4);
+}
+
+void PipBoyDisplay::drawHudBottomLabel() {
+  drawLine(10, 300, 10, 280, 0);
+  drawLine(10, 300, 460, 300, 0);
+  drawLine(460, 300, 460, 280, 0);
+}
+
+void PipBoyDisplay::clearBottomHud() {
+  fillRect(10, 280, 460, 35, 4);
+}
+
+void PipBoyDisplay::drawTopHud(uint8_t page) {
+  switch (page) {
+    default:
+    case 0:
+      drawStatPageTopHud();
+      break;
+    case 1:
+      drawItemPageTopHud();
+      break;
+    case 2:
+      break;
+  }
+}
+
+void PipBoyDisplay::drawBottomHud(uint8_t page, uint8_t category) {
+  switch (page) {
+    default:
+    case 0:
+      drawStatPageBottomHud(category);
+      break;
+    case 1:
+      drawItemPageBottomHud(category);
+      break;
+    case 2:
+      break;
+  }
+}
+
+void PipBoyDisplay::drawStatPageTopHud() {
+  drawHudTopLabel();
+
+  fillRect(20, 15, 80, 10, 4); // delete drawn line
+  moveCursor(30, 15);
+  typeString(STAT_PAGE, true);
+
+  drawLine(205, 20, 205, 40, 0);
+  fillRect(206, 20, 5, 5, 4);
+  moveCursor(95, 25);
+  typeString("  LVL   8", true);
+
+  drawLine(325, 20, 325, 40, 0);
+  fillRect(326, 20, 5, 5, 4);
+  moveCursor(220, 25);
+  typeString("HP 55/96", true);
+
+  moveCursor(335, 25);
+  typeString("XP 542/850", true);
+}
+
+void PipBoyDisplay::drawItemPageTopHud() {
+  drawHudTopLabel();
+
+  // text
+  fillRect(20, 15, 80, 10, 4); // delete drawn line
+  moveCursor(30, 15);
+  typeString(INVENTORY_PAGE, true);
+
+  // wg
+  drawLine(205, 20, 205, 40, 0);
+  fillRect(206, 20, 5, 5, 4);
+  moveCursor(95, 25);
+  typeString("Wg 88/190", true);
+
+  //hp
+  drawLine(325, 20, 325, 40, 0);
+  fillRect(326, 20, 5, 5, 4);
+  moveCursor(220, 25);
+  typeString("HP 55/96", true);
+
+  //caps
+  moveCursor(335, 25);
+  typeString("Caps 33521", true);
+}
+
+void PipBoyDisplay::drawItemPageBottomHud(uint8_t selected) {
+  drawHudBottomLabel();
+
+  fillRect(20, 300, 100, 5, 4);
+  moveCursor(30,295);
+  typeString(INVENTORY_CATEGORY1, true);
+
+  fillRect(130, 300, 100, 5, 4);
+  moveCursor(140,295);
+  typeString(INVENTORY_CATEGORY2, true);
+
+  fillRect(240, 300, 55, 5, 4);
+  moveCursor(250,295);
+  typeString(INVENTORY_CATEGORY3, true);
+
+  fillRect(305, 300, 65, 5, 4);
+  moveCursor(315,295);
+  typeString(INVENTORY_CATEGORY4, true);
+
+  fillRect(380, 300, 65, 5, 4);
+  moveCursor(390,295);
+  typeString(INVENTORY_CATEGORY5, true);
+
+  int16_t x = 0;
+  int16_t y = 292;
+  int16_t width = 1;
+  int16_t height = 21;
+  switch (selected) {
+    default:
+    case 0:
+      x = 20;
+      width = 100;
+      break;
+    case 1:
+      x = 130;
+      width = 100;
+      break;
+    case 2:
+      x = 240;
+      width = 55;
+      break;
+    case 3:
+      x = 305;
+      width = 65;
+      break;
+    case 4:
+      x = 380;
+      width = 65;
+      break;
+  }
+  drawRect(x, y, width, height, 2);
+}
+
+void PipBoyDisplay::drawStatPageBottomHud(uint8_t selected) {
+  drawHudBottomLabel();
+
+  fillRect(15, 300, 90, 5, 4);
+  moveCursor(25,295);
+  typeString(STAT_CATEGORY1, true);
+
+  fillRect(115, 300, 100, 5, 4);
+  moveCursor(125,295);
+  typeString(STAT_CATEGORY2, true);
+
+  fillRect(225, 300, 90, 5, 4);
+  moveCursor(235,295);
+  typeString(STAT_CATEGORY3, true);
+
+  fillRect(325, 300, 65, 5, 4);
+  moveCursor(335,295);
+  typeString(STAT_CATEGORY4, true);
+
+  fillRect(400, 300, 55, 5, 4);
+  moveCursor(410,295);
+  typeString(STAT_CATEGORY5, true);
+
+  int16_t x = 0;
+  int16_t y = 292;
+  int16_t width = 1;
+  int16_t height = 21;
+  switch (selected) {
+    default:
+    case 0:
+      x = 15;
+      width = 90;
+      break;
+    case 1:
+      x = 115;
+      width = 100;
+      break;
+    case 2:
+      x = 225;
+      width = 90;
+      break;
+    case 3:
+      x = 325;
+      width = 65;
+      break;
+    case 4:
+      x = 400;
+      width = 55;
+      break;
+  }
+  drawRect(x, y, width, height, 2);
 }
 
 uint16_t PipBoyDisplay::getCursorX() {
