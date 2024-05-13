@@ -14,8 +14,6 @@
 #define PAGE_LEFT_RIGHT_CLK 8
 #define PAGE_LEFT_RIGHT_DT 9
 #define PAGE_LEFT_RIGHT_SW 11
-
-// todo...
 #define PAGE_UP_DOWN_SW 13
 #define PAGE_UP_DOWN_CLK 13
 #define PAGE_UP_DOWN_DT 13
@@ -25,5 +23,5 @@
 #define INV_LIGHT 3
 #define DATA_LIGHT 4
 
-// sd card reader
+// sd card reader on the tft ili
 #define SDC_CS 53
