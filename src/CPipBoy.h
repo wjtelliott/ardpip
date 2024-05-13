@@ -63,6 +63,7 @@ class PipBoy {
   private:
     uint8_t _currentPage;
     bool _needsPageRedraw;
+    bool _isRedrawingNewPage;
 
     Rotary _changePageRotary = { PAGE_SELECT_CLK, PAGE_SELECT_DT, PAGE_SELECT_SW };
     Rotary _pageHorizontalRotary = { PAGE_LEFT_RIGHT_CLK, PAGE_LEFT_RIGHT_DT, PAGE_LEFT_RIGHT_SW };
@@ -109,6 +110,9 @@ class PipBoy {
     int8_t getPageDirection();
     int8_t getCategoryDirection();
 
+    // setters
+    void setIsRedrawingNewPage(bool);
+
     // getters
     char* getPageName();
     char* getCategoryName();
@@ -119,6 +123,9 @@ class PipBoy {
     int* getLastPageSelectVoltage();
     int* getLastCategoryVoltage();
     uint8_t getControllerTypeInfo(char*, char*);
+    uint8_t getCurrentPage();
+    uint8_t getPageCategory();
+    bool isRedrawingNewPage();
 };
 
 #endif

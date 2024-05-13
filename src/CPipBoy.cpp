@@ -20,22 +20,26 @@ PipBoy::PipBoy() {}
 ** Helpers
 ***************************************************************************************/
 
+//todo: this could probably be worked into the PipBoy tick func somehow or something
 void redrawPage(bool* needsRedraw, PipBoyDisplay* display, PipBoy* pip) {
   if (!*needsRedraw) return;
-  display->moveCursor(0, 0);
-  display->typeStringLn("  STAT    INV    DATA    MAP    RADIO        ", true);
-  display->typeStringLn("---------------------------------------------", true);
-  display->fillRect(0, 50, 225, 200, 4);
   *needsRedraw = false;
-  display->moveCursor(25,50);
-  display->typeString(pip->getPageName(), true);
-  display->typeString(" - ", true);
-  display->typeStringLn(pip->getCategoryName(), true);
-  display->typeStringLn("", true);
+
+  if (pip->isRedrawingNewPage()) {
+    display->clearTopHud();
+    display->drawTopHud(pip->getCurrentPage()); // todo, replace with "drawPageTop" when impl
+    pip->setIsRedrawingNewPage(false);
+  }
+  display->clearBottomHud();
+  display->drawBottomHud(pip->getCurrentPage(), pip->getPageCategory());
+
+  display->fillRect(0, 80, 460, 200, 4);
 
   LinkedList items = pip->getAllItemNamesForPage();
   Item *curr = items.loop();
+  display->moveCursor(0, 80);
   while (curr != nullptr) {
+    display->typeString("   ", true);
     display->typeString(curr->name, true);
     char buf[8];
     strcpy(buf, " (");
@@ -63,12 +67,12 @@ void test(PipBoy* pip) {
   delay(1750);
 }
 
+// these funcs could prob be in their own file
 int* getLastVoltagePointer(char* type, PipBoy* pip) {
   if (type == "leftright") return pip->getLastCategoryVoltage();
   // if (type == "updown") return &lastPageUpDownVoltage;
   if (type == "page") return pip->getLastPageSelectVoltage();
 }
-
 int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
   uint8_t CLK = pip->getControllerTypeInfo(rotaryType, "CLK");
   uint8_t DT = pip->getControllerTypeInfo(rotaryType, "DT");
@@ -84,40 +88,44 @@ int8_t getRotateStateOfRotaryButton(char* rotaryType, PipBoy* pip) {
   return direction == HIGH ? _CLOCKWISE : _COUNTER_CLOCKWISE;
 }
 
+//todo: move this to a new file + populate with correct + more data
 void setUpStatPage(PipBoyPage *page) {
-  // stats
+  // status
   page->pushItem(0, getItem(STAT_HEALTH_ID));
   page->pushItem(0, getItem(STAT_RADIATION_ID));
   page->pushItem(0, getItem(STAT_LEVEL_ID));
 
-  // conditions
-  page->pushItem(1, getItem(CONDITION_RADIATION_ID));
-  page->pushItem(1, getItem(CONDITION_POISONED_ID));
-
   // s.p.e.c.i.a.l.s
-  page->pushItem(2, getItem(SPECIAL_STRENGTH_ID));
-  page->pushItem(2, getItem(SPECIAL_PERCEPTION_ID));
-  page->pushItem(2, getItem(SPECIAL_ENDURANCE_ID));
-  page->pushItem(2, getItem(SPECIAL_CHARISMA_ID));
-  page->pushItem(2, getItem(SPECIAL_INTELLIGENCE_ID));
-  page->pushItem(2, getItem(SPECIAL_AGILITY_ID));
-  page->pushItem(2, getItem(SPECIAL_LUCK_ID));
+  page->pushItem(1, getItem(SPECIAL_STRENGTH_ID));
+  page->pushItem(1, getItem(SPECIAL_PERCEPTION_ID));
+  page->pushItem(1, getItem(SPECIAL_ENDURANCE_ID));
+  page->pushItem(1, getItem(SPECIAL_CHARISMA_ID));
+  page->pushItem(1, getItem(SPECIAL_INTELLIGENCE_ID));
+  page->pushItem(1, getItem(SPECIAL_AGILITY_ID));
+  page->pushItem(1, getItem(SPECIAL_LUCK_ID));
 
-  //health
-  page->pushItem(3, getItem(HEALTH_BROKEN_LEG_ID));
-  page->pushItem(3, getItem(HEALTH_BROKEN_ARM_ID));
+  // skills
+  page->pushItem(2, getItem(SKILLS_BARTER_ID));
+  page->pushItem(2, getItem(SKILLS_BIG_GUNS_ID));
 
-  //something else
-  page->pushItem(4, getItem(STAT_1_BROKEN_LEG_ID));
-  page->pushItem(4, getItem(STAT_1_BROKEN_ARM_ID));
+  // perks
+  page->pushItem(3, getItem(PERKS_ANT_SIGHT_ID));
+  page->pushItem(3, getItem(PERKS_COMMANDO_ID));
+
+  // general
+  page->pushItem(4, getItem(GENERAL_QUESTS_COMPLETED_ID));
+  page->pushItem(4, getItem(GENERAL_LOCATIONS_DISCOVERED_ID));
 }
 
 /***************************************************************************************
 ** Void methods
 ***************************************************************************************/
 void PipBoy::init() {
+  // todo: we can probably free or delete some memory after we've used it to init. like `rotaries[]`
+
   _currentPage = 0;
   _needsPageRedraw = true;
+  _isRedrawingNewPage = true;
   _display.init();
 
   delay(2000);
@@ -141,6 +149,7 @@ void PipBoy::init() {
 
   // set up default inventory
   setUpStatPage(_pages[0]);
+  //todo when they exist:
   // setUpInvPage(_pages[1]);
   // setUpDataPage(_pages[2]);
 }
@@ -154,6 +163,7 @@ void PipBoy::updatePipLights() {
 
 void PipBoy::boot() {
   _display.clear();
+  //todo: buildGarbageBootData isn't memory safe and we must free later. make it safe
   char* garbage = malloc(0);
   buildGarbageBootData(garbage);
   printGarbageBootData(garbage, 3);
@@ -166,8 +176,6 @@ void PipBoy::boot() {
   _display.drawSDImage("fallout.bmp");
   delay(1500);
   _display.clear();
-  _display.drawSDImage("inv.bmp");
-  _display.fillRect(0, 0, 480, 50, 4);
 }
 
 void PipBoy::buildGarbageBootData(char* buffer) {
@@ -236,6 +244,7 @@ void PipBoy::haltAndBlinkCursor(uint8_t amount) {
   }
 }
 
+//todo: error message should prob be more fleshed out later
 void PipBoy::throwError(char* message) {
   _display.displayError(message);
 }
@@ -246,6 +255,7 @@ void PipBoy::assertPageInScope() {
   throwError("Page index out of bounds.");
 }
 
+// todo: draw a box around the currently highlighted item in the page
 void PipBoy::moveHighlightedItem(int8_t direction) {}
 
 void PipBoy::changePage(int8_t direction) {
@@ -258,7 +268,10 @@ void PipBoy::changePage(int8_t direction) {
     _currentPage += sanitizedDirection;
     if (_currentPage >= sizeof(_pages)/sizeof(_pages[0])) _currentPage = 0;
   }
-  if (sanitizedDirection) _needsPageRedraw = true;
+  if (sanitizedDirection) {
+    _isRedrawingNewPage = true;
+    _needsPageRedraw = true;
+  }
 }
 
 void PipBoy::changeCategory(int8_t direction) {
@@ -269,36 +282,14 @@ void PipBoy::changeCategory(int8_t direction) {
   if (sanitizedDirection) _needsPageRedraw = true;
 }
 
+// todo: delete before deploy. this is just here to sandbox things inside the scope of the classes
 void PipBoy::sandbox() {
-  LinkedList list;
-  Item* wep = new Item("bat", 2);
-  Item* wep2 = new Item("club", 4);
-  Item* wep3 = new Item("gun", 3);
-  Item* wep4 = new Item("boomerang", 81);
-  list.push_back(wep);
-  list.push_back(wep2);
-  list.push_back(wep3);
-  list.push_back(wep4);
-
-  list.print();
-
-  Serial.println("------");
-
-  list.deleteAt(2);
-  list.print();
-
-  Item* randomItem = list.at(2);
-  list.deleteByValue(randomItem);
-
-  Serial.println("---- iterating thru all left: ----");
-  Item *currentItem = list.loop();
-  while (currentItem != nullptr) {
-    Serial.print("Item: ");
-    Serial.println(currentItem->name);
-    currentItem = list.nextItem();
+  for (uint8_t i = 0; i <= 4; i++) {
+    _display.drawItemPageTopHud();
+    _display.clearBottomHud();
+    _display.drawItemPageBottomHud(i);
+    delay(1250);
   }
-
-
   Serial.println("done");
   for(;;);
 }
@@ -319,6 +310,18 @@ void PipBoy::tick() {
 /***************************************************************************************
 ** Getters
 ***************************************************************************************/
+bool PipBoy::isRedrawingNewPage() {
+  return _isRedrawingNewPage;
+}
+
+uint8_t PipBoy::getPageCategory() {
+  return _pages[_currentPage]->getPageCategory();
+}
+
+uint8_t PipBoy::getCurrentPage() {
+  return _currentPage;
+}
+
 uint8_t PipBoy::getControllerTypeInfo(char* type, char* pinType) {
   if (type == "leftright") {
     return pinType == "CLK" ? _pageHorizontalRotary.CLK : _pageHorizontalRotary.DT;
@@ -379,4 +382,9 @@ int8_t PipBoy::getCategoryDirection() {
   return -rotaryDirection;
 #endif
   return rotaryDirection;
+}
+
+// setters
+void PipBoy::setIsRedrawingNewPage(bool val) {
+  _isRedrawingNewPage = val;
 }
